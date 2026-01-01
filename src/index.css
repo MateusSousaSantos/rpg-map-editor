@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+/* Global pixel art settings */
+* {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Canvas specific pixel art rules */
+canvas {
+  image-rendering: -moz-crisp-edges !important;
+  image-rendering: -webkit-crisp-edges !important;
+  image-rendering: pixelated !important;
+  image-rendering: crisp-edges !important;
+  image-rendering: -webkit-optimize-contrast !important;
+  /* Prevent subpixel rendering */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: none;
+}
+
+/* Konva specific overrides */
+.konvajs-content {
+  image-rendering: pixelated !important;
+  image-rendering: crisp-edges !important;
+  /* Ensure pixel-perfect positioning */
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.konvajs-content canvas {
+  image-rendering: pixelated !important;
+  image-rendering: crisp-edges !important;
+  /* Prevent gaps between tiles */
+  outline: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom class for pixel art canvas */
+.pixel-art-canvas {
+  image-rendering: pixelated !important;
+}
+
+/* Custom opacity slider styles */
+.opacity-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.opacity-slider::-webkit-slider-track {
+  background: #475569;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.opacity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #e2e8f0;
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.opacity-slider::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  border: none;
+}
+
+.opacity-slider::-moz-range-thumb {
+  height: 12px;
+  width: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Custom scrollbar styles */
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e293b; /* slate-800 */
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #475569; /* slate-600 */
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b; /* slate-500 */
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #94a3b8; /* slate-400 */
+}
+
+/* Corner when both horizontal and vertical scrollbars are present */
+::-webkit-scrollbar-corner {
+  background: #1e293b;
+}
+
+/* Thin scrollbar variant for specific elements */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #374151; /* gray-700 */
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #4b5563; /* gray-600 */
+}
+
+/* Dark theme scrollbar */
+.scrollbar-dark::-webkit-scrollbar-track {
+  background: #0f172a; /* slate-900 */
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb {
+  background: #334155; /* slate-700 */
+}
+
+.scrollbar-dark::-webkit-scrollbar-thumb:hover {
+  background: #475569; /* slate-600 */
+}
