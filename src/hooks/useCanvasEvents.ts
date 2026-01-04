@@ -5,6 +5,7 @@ import { useToolStore } from '../stores/toolStore';
 import { useUISelectionStore } from '../stores/uiSelectionStore';
 import { useViewportStore } from '../stores/viewportStore';
 import type { TileInstance, TileType } from '../types/map';
+import { createProp, getNextZIndex, findPropsAtPosition } from '../utils/props';
 
 interface CanvasEventsParams {
   tileSize: number;
@@ -24,10 +25,10 @@ interface CanvasEventsParams {
  * @param editable - Whether the canvas is in edit mode
  */
 export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
-  const { activeTool, selectedTileDefinitionId, selectedTileGridType } = useToolStore();
-  const { addTile, removeTile, getTileAt, map } = useMapStore();
+  const { activeTool, selectedTileDefinitionId, selectedTileGridType, selectedPropDefinitionId } = useToolStore();
+  const { addTile, removeTile, getTileAt, map, addProp } = useMapStore();
   const { zoom, panX, panY } = useViewportStore();
-  const { selectTiles, toggleTileSelection, clearSelection, selectedLayerId } = useUISelectionStore();
+  const { selectTiles, toggleTileSelection, clearSelection, selectedLayerId, selectProps, togglePropSelection } = useUISelectionStore();
   
   // Track if we're currently drawing (for drag operations)
   const isDrawingRef = useRef(false);
@@ -50,6 +51,16 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     
     return { gridX, gridY };
   }, [tileSize, zoom, panX, panY]);
+  
+  /**
+   * Convert stage coordinates to world coordinates (for props)
+   */
+  const screenToWorld = useCallback((stageX: number, stageY: number): { worldX: number; worldY: number } => {
+    const worldX = (stageX - panX) / zoom;
+    const worldY = (stageY - panY) / zoom;
+    
+    return { worldX, worldY };
+  }, [zoom, panX, panY]);
   
   /**
    * Check if grid position is within map bounds
@@ -186,11 +197,10 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
   }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTileAt]);
   
   /**
-   * Handle selection tool - select tiles
+   * Handle selection tool - select tiles or props
    */
-  const handleSelectionTool = useCallback((gridX: number, gridY: number, isMultiSelect: boolean) => {
+  const handleSelectionTool = useCallback((gridX: number, gridY: number, worldX: number, worldY: number, isMultiSelect: boolean) => {
     if (!map) return;
-    if (!isInBounds(gridX, gridY)) return;
     
     // Get the selected layer, or default to first layer
     const layer = selectedLayerId 
@@ -198,26 +208,76 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       : map.layers[0];
     if (!layer) return;
     
-    // Find tile at this position - check all types, prioritize overlay > wall > terrain
-    const tileTypes: TileType[] = ['overlay', 'wall', 'terrain'];
-    let tile: TileInstance | undefined;
-    for (const type of tileTypes) {
-      tile = getTileAt(layer.id, gridX, gridY, type);
-      if (tile) break;
+    // First, check for props at this position (they should have priority)
+    const propsAtPosition = findPropsAtPosition(layer.props, worldX, worldY);
+    
+    if (propsAtPosition.length > 0) {
+      // Select the topmost prop
+      const topProp = propsAtPosition[0];
+      if (isMultiSelect) {
+        togglePropSelection(topProp.id);
+      } else {
+        selectProps([topProp.id]);
+      }
+      return;
     }
     
-    if (tile) {
-      if (isMultiSelect) {
-        toggleTileSelection(tile.id);
+    // If no props found, check for tiles
+    if (isInBounds(gridX, gridY)) {
+      // Find tile at this position - check all types, prioritize overlay > wall > terrain
+      const tileTypes: TileType[] = ['overlay', 'wall', 'terrain'];
+      let tile: TileInstance | undefined;
+      for (const type of tileTypes) {
+        tile = getTileAt(layer.id, gridX, gridY, type);
+        if (tile) break;
+      }
+      
+      if (tile) {
+        if (isMultiSelect) {
+          toggleTileSelection(tile.id);
+        } else {
+          selectTiles([tile.id]);
+        }
       } else {
-        selectTiles([tile.id]);
+        if (!isMultiSelect) {
+          clearSelection();
+        }
       }
     } else {
       if (!isMultiSelect) {
         clearSelection();
       }
     }
-  }, [map, selectedLayerId, isInBounds, getTileAt, toggleTileSelection, selectTiles, clearSelection]);
+  }, [map, selectedLayerId, isInBounds, getTileAt, toggleTileSelection, selectTiles, clearSelection, togglePropSelection, selectProps]);
+  
+  /**
+   * Handle place-prop tool - place a prop at clicked position
+   */
+  const handlePlacePropTool = useCallback((worldX: number, worldY: number) => {
+    if (!map || !selectedPropDefinitionId) return;
+    
+    // Get the selected layer, or default to first layer
+    const layer = selectedLayerId 
+      ? map.layers.find(l => l.id === selectedLayerId)
+      : map.layers[0];
+    if (!layer || layer.locked) return;
+    
+    // Get prop definition
+    const propDefinition = map.propDefinitions.find(def => def.id === selectedPropDefinitionId);
+    if (!propDefinition) return;
+    
+    // Get next z-index
+    const nextZIndex = getNextZIndex(layer.props);
+    
+    // Create prop instance
+    const newProp = createProp(propDefinition, worldX, worldY, nextZIndex);
+    
+    // Add to map
+    addProp(layer.id, newProp);
+    
+    // Select the newly placed prop
+    selectProps([newProp.id]);
+  }, [map, selectedPropDefinitionId, selectedLayerId, addProp, selectProps]);
   
   /**
    * Handle mouse down event
@@ -238,6 +298,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     if (!pointer) return;
     
     const { gridX, gridY } = screenToGrid(pointer.x, pointer.y);
+    const { worldX, worldY } = screenToWorld(pointer.x, pointer.y);
     
     isDrawingRef.current = true;
     lastDrawnTileRef.current = { x: gridX, y: gridY };
@@ -251,13 +312,16 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         handleEraserTool(gridX, gridY);
         break;
       case 'select':
-        handleSelectionTool(gridX, gridY, e.evt.ctrlKey || e.evt.metaKey);
+        handleSelectionTool(gridX, gridY, worldX, worldY, e.evt.ctrlKey || e.evt.metaKey);
         break;
       case 'box':
         boxStartRef.current = { x: gridX, y: gridY };
         break;
+      case 'place-prop':
+        handlePlacePropTool(worldX, worldY);
+        break;
     }
-  }, [editable, activeTool, screenToGrid, handleBrushTool, handleEraserTool, handleSelectionTool]);
+  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handlePlacePropTool]);
   
   /**
    * Handle mouse move event (for drag drawing)

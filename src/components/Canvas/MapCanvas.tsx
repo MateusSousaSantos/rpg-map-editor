@@ -6,9 +6,11 @@ import { useViewportStore } from '../../stores/viewportStore';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
 import { GridLayer } from './BackgroundLayer';
 import { TileLayer } from './TileLayer';
+import { PropLayer } from './PropLayer';
 import { CursorLayer } from './CursorLayer';
 import { FiZoomIn, FiZoomOut, FiMaximize2 } from 'react-icons/fi';
 import { useCanvasEvents } from '../../hooks/useCanvasEvents';
+import { createProp, getNextZIndex } from '../../utils/props';
 
 
 interface MapCanvasProps {
@@ -39,8 +41,10 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
   
   // Store state
   const map = useMapStore((state) => state.map);
+  const { addProp } = useMapStore();
   const { panX, panY, zoom, setPan, setZoom, resetViewport } = useViewportStore();
   const showGrid = useUISelectionStore((state) => state.showGrid);
+  const { selectedLayerId, selectProps } = useUISelectionStore();
   
   // Canvas events hook for tool interactions
   const canvasEvents = useCanvasEvents({
@@ -128,6 +132,11 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
   
   // Handle panning with middle mouse or space + drag
   const handleMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    // If clicking on empty canvas (stage), deselect props
+    if (e.target === e.target.getStage()) {
+      selectProps([]);
+    }
+    
     // Middle mouse button or shift key + left mouse for panning
     if (e.evt.button === 1 || (e.evt.button === 0 && e.evt.shiftKey)) {
       e.evt.preventDefault();
@@ -212,6 +221,52 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
     resetViewport();
   };
   
+  // Handle prop drop from library
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    
+    const propDefinitionId = e.dataTransfer.getData('propDefinitionId');
+    if (!propDefinitionId || !map) return;
+    
+    // Get drop position relative to container
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const dropX = e.clientX - rect.left;
+    const dropY = e.clientY - rect.top;
+    
+    // Convert to world coordinates
+    const worldX = (dropX - panX) / zoom;
+    const worldY = (dropY - panY) / zoom;
+    
+    // Get the selected layer, or default to first layer
+    const layer = selectedLayerId 
+      ? map.layers.find(l => l.id === selectedLayerId)
+      : map.layers[0];
+    if (!layer || layer.locked) return;
+    
+    // Get prop definition
+    const propDefinition = map.propDefinitions.find(def => def.id === propDefinitionId);
+    if (!propDefinition) return;
+    
+    // Get next z-index
+    const nextZIndex = getNextZIndex(layer.props);
+    
+    // Create prop instance
+    const newProp = createProp(propDefinition, worldX, worldY, nextZIndex);
+    
+    // Add to map
+    addProp(layer.id, newProp);
+    
+    // Select the newly placed prop
+    selectProps([newProp.id]);
+  };
+  
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+  
   // If no map is loaded, show placeholder
   if (!map) {
     return (
@@ -229,6 +284,8 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
       ref={containerRef}
       className="relative flex-1 overflow-hidden bg-slate-900"
       tabIndex={0}
+      onDrop={handleDrop}
+      onDragOver={handleDragOver}
     >
       {/* Konva Stage */}
       <Stage
@@ -239,6 +296,7 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
         y={Math.round(panY)}
         scaleX={zoom}
         scaleY={zoom}
+        pixelRatio={window.devicePixelRatio || 1}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleStageMouseMove}
@@ -257,6 +315,18 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
               tileSize={map.tileSize}
               canvasWidth={dimensions.width}
               canvasHeight={dimensions.height}
+            />
+          ))
+        }
+        
+        {/* Prop Layers - Render props from all layers */}
+        {map.layers
+          .slice()
+          .sort((a, b) => a.depthIndex - b.depthIndex)
+          .map(layer => (
+            <PropLayer 
+              key={`props-${layer.id}`}
+              layer={layer}
             />
           ))
         }

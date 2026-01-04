@@ -1,17 +1,22 @@
 import { useEffect } from 'react';
 import { MapCanvas } from './components/Canvas/MapCanvas';
 import { Sidebar } from './components/Sidebar';
+import { PropsHierarchy } from './components/PropsHierarchy';
 import { useMapStore } from './stores/mapStore';
 import { useToolStore } from './stores/toolStore';
 import { useUISelectionStore } from './stores/uiSelectionStore';
 import { useSampleTiles } from './utils/testHelpers';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { FiEdit2, FiTrash2, FiMousePointer, FiGrid, FiSquare } from 'react-icons/fi';
 
 function App() {
-  const { map, createMap } = useMapStore();
+  const { map, createMap, addPropDefinition } = useMapStore();
   const { createSampleTiles } = useSampleTiles();
   const { activeTool, setActiveTool } = useToolStore();
   const { showGrid, toggleGrid, selectLayer, selectedLayerId } = useUISelectionStore();
+  
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts();
   
   // Create a test map on first load
   useEffect(() => {
@@ -38,8 +43,34 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map]);
   
+  // Create sample prop definitions
+  useEffect(() => {
+    if (map && map.propDefinitions.length === 0) {
+      // Add sample prop definitions for testing
+      const sampleProps = [
+        {
+          id: 'stone-1',
+          name: 'Pedra',
+          category: 'terrain',
+          textureUrl: '/props/pedra.png',
+          width: 16,  // Use actual image dimensions to avoid blur
+          height: 16,
+          tags: ['outdoor', 'nature'],
+          defaultOpacity: 1,
+          defaultScaleX: 1,
+          defaultScaleY: 1,
+        }
+      ];
+      
+      sampleProps.forEach(prop => addPropDefinition(prop));
+    }
+  }, [map, addPropDefinition]);
+  
   return (
     <div className="flex h-screen w-screen overflow-hidden">
+      {/* Left Sidebar - Props Hierarchy */}
+      <PropsHierarchy />
+      
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col bg-slate-950 min-w-0">
         <header className="h-12 border-b border-slate-800 bg-slate-900/80 flex items-center px-4 justify-between">
@@ -48,7 +79,7 @@ function App() {
           </h1>
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <span>
-                Phase 3: User Interaction
+                Prop System - Phase 1-5 Complete
               </span>
             </div>
           </header>
@@ -125,7 +156,7 @@ function App() {
             </button>
             {/* Instructions */}
             <div className="ml-auto text-xs text-slate-500">
-              <span>💡 Click/Drag to paint • Shift+Drag to pan • Scroll to zoom</span>
+              <span>💡 Drag props from sidebar • Shift+Drag to pan • Scroll to zoom</span>
             </div>
           </div>
           

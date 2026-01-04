@@ -112,6 +112,11 @@ export const TilesPanel = () => {
   const overlayTiles = map.tileDefinitions.filter((t) => t.type === "overlay");
 
   const handleSelectTile = (tileId: string, gridType: TileType) => {
+    if(selectedTileDefinitionId === tileId && selectedTileGridType === gridType) {
+      // Deselect if clicking the same tile
+      setSelectedTileDefinition("", "terrain");
+      return;
+    }
     setSelectedTileDefinition(tileId, gridType);
   };
 

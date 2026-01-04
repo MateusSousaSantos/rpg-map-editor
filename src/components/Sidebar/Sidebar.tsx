@@ -2,6 +2,7 @@ import { useUISelectionStore } from '../../stores/uiSelectionStore';
 import { FiChevronRight, FiChevronLeft } from 'react-icons/fi';
 import { LayersPanel } from './LayersPanel';
 import { TilesPanel } from './TilesPanel';
+import { PropsPanel } from './PropsPanel';
 
 export const Sidebar = () => {
   const { sidebarOpen, toggleSidebar } = useUISelectionStore();
@@ -33,6 +34,9 @@ export const Sidebar = () => {
             <div className="space-y-6">
               {/* Tiles Panel */}
               <TilesPanel />
+              
+              {/* Props Panel */}
+              <PropsPanel />
 
               {/* Layers Panel */}
               <LayersPanel />
