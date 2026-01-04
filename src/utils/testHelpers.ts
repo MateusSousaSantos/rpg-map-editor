@@ -51,21 +51,6 @@ export const useSampleTiles = () => {
       }
     }
 
-    // Add some wood overlay tiles in a 3x3 area
-    for (let y = 2; y < 5; y++) {
-      for (let x = 2; x < 5; x++) {
-        const tile: TileInstance = {
-          id: `overlay-${x}-${y}`,
-          definitionId: 'wood-1',
-          gridX: x,
-          gridY: y,
-          type: 'terrain',
-          opacity: 1,
-        };
-        addTile(groundLayerId, tile);
-      }
-    }
-
     console.log('✅ Sample tiles created');
   };
 
