@@ -190,7 +190,7 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
   
   const handleStageMouseLeave = () => {
     setCursorGridPos(null);
-    canvasEvents.handleMouseUp();
+    // Note: canvasEvents handles its own mouseup cleanup via Stage events
   };
   
   // Zoom controls
@@ -267,6 +267,7 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
             tileSize={map.tileSize}
             cursorGridX={cursorGridPos?.x ?? null}
             cursorGridY={cursorGridPos?.y ?? null}
+            boxPreview={canvasEvents.boxPreview}
           />
         )}
         

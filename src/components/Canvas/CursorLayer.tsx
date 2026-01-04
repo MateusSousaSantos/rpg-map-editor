@@ -8,13 +8,14 @@ interface CursorLayerProps {
   tileSize: number;
   cursorGridX: number | null;
   cursorGridY: number | null;
+  boxPreview?: { startX: number; startY: number; endX: number; endY: number } | null;
 }
 
 /**
  * CursorLayer - Shows preview of the tile that will be placed
  * Displays a semi-transparent preview of the selected tile at cursor position
  */
-export const CursorLayer = ({ tileSize, cursorGridX, cursorGridY }: CursorLayerProps) => {
+export const CursorLayer = ({ tileSize, cursorGridX, cursorGridY, boxPreview }: CursorLayerProps) => {
   const { activeTool, selectedTileDefinitionId } = useToolStore();
   const map = useMapStore((state) => state.map);
   
@@ -26,8 +27,60 @@ export const CursorLayer = ({ tileSize, cursorGridX, cursorGridY }: CursorLayerP
   // Load tile image unconditionally (hooks must be called in the same order every render)
   const [image] = useImage(definition?.textureUrl || '');
   
-  // Now we can do conditional rendering
-  // Only show cursor for brush tool
+  // Show box preview when dragging
+  if (activeTool === 'box' && boxPreview && map) {
+    const minX = Math.min(boxPreview.startX, boxPreview.endX);
+    const maxX = Math.max(boxPreview.startX, boxPreview.endX);
+    const minY = Math.min(boxPreview.startY, boxPreview.endY);
+    const maxY = Math.max(boxPreview.startY, boxPreview.endY);
+    
+    const boxWidth = (maxX - minX + 1) * tileSize;
+    const boxHeight = (maxY - minY + 1) * tileSize;
+    const boxX = minX * tileSize;
+    const boxY = minY * tileSize;
+    
+    return (
+      <Layer listening={false}>
+        {/* Box preview background */}
+        <Rect
+          x={boxX}
+          y={boxY}
+          width={boxWidth}
+          height={boxHeight}
+          fill="rgba(138, 43, 226, 0.2)"
+          stroke="rgba(138, 43, 226, 0.8)"
+          strokeWidth={2}
+        />
+        
+        {/* Preview tiles in the box */}
+        {image && definition && (() => {
+          const tiles = [];
+          for (let y = minY; y <= maxY; y++) {
+            for (let x = minX; x <= maxX; x++) {
+              // Check if within bounds
+              if (x >= 0 && x < map.width && y >= 0 && y < map.height) {
+                tiles.push(
+                  <KonvaImage
+                    key={`${x}-${y}`}
+                    image={image}
+                    x={x * tileSize}
+                    y={y * tileSize}
+                    width={tileSize}
+                    height={tileSize}
+                    opacity={0.4}
+                    perfectDrawEnabled={false}
+                  />
+                );
+              }
+            }
+          }
+          return tiles;
+        })()}
+      </Layer>
+    );
+  }
+  
+  // Show cursor for brush tool
   if (activeTool !== 'brush' || !selectedTileDefinitionId || !map) return null;
   if (cursorGridX === null || cursorGridY === null) return null;
   

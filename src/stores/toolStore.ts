@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { create } from 'zustand';
-export type ToolType = 'brush' | 'eraser' | 'fill' | 'place-prop' | 'select' | 'pan';
+export type ToolType = 'brush' | 'eraser' | 'fill' | 'place-prop' | 'select' | 'pan' | 'box';
 
 interface ToolState {
   activeTool: ToolType;

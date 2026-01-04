@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import Konva from 'konva';
 import { useMapStore } from '../stores/mapStore';
 import { useToolStore } from '../stores/toolStore';
@@ -32,6 +32,10 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
   // Track if we're currently drawing (for drag operations)
   const isDrawingRef = useRef(false);
   const lastDrawnTileRef = useRef<{ x: number; y: number } | null>(null);
+  
+  // Track box paint start position
+  const boxStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [boxPreview, setBoxPreview] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
   
   /**
    * Convert stage coordinates to grid coordinates
@@ -119,6 +123,69 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
   }, [map, selectedLayerId, isInBounds, getTileAt, removeTile]);
   
   /**
+   * Handle box paint tool - paint tiles in a rectangular area
+   */
+  const handleBoxPaintTool = useCallback((startX: number, startY: number, endX: number, endY: number) => {
+    if (!map || !selectedTileDefinitionId || !selectedTileGridType) return;
+    
+    // Get the selected layer, or default to first layer
+    const layer = selectedLayerId 
+      ? map.layers.find(l => l.id === selectedLayerId)
+      : map.layers[0];
+    if (!layer || layer.locked) return;
+    
+    // Calculate bounds
+    const minX = Math.min(startX, endX);
+    const maxX = Math.max(startX, endX);
+    const minY = Math.min(startY, endY);
+    const maxY = Math.max(startY, endY);
+    
+    // Collect all tiles to add
+    const tilesToAdd: TileInstance[] = [];
+    const tileIdsToRemove: string[] = [];
+    
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        if (!isInBounds(x, y)) continue;
+        
+        // Check if tile already exists at this position for this type
+        const existingTile = getTileAt(layer.id, x, y, selectedTileGridType as TileType);
+        
+        // Skip if same tile already exists
+        if (existingTile && 
+            existingTile.definitionId === selectedTileDefinitionId &&
+            existingTile.type === selectedTileGridType) {
+          continue;
+        }
+        
+        // Mark existing tile for removal
+        if (existingTile) {
+          tileIdsToRemove.push(existingTile.id);
+        }
+        
+        // Create new tile
+        const newTile: TileInstance = {
+          id: crypto.randomUUID(),
+          definitionId: selectedTileDefinitionId,
+          gridX: x,
+          gridY: y,
+          type: selectedTileGridType,
+        };
+        
+        tilesToAdd.push(newTile);
+      }
+    }
+    
+    // Batch operations for better performance
+    if (tileIdsToRemove.length > 0) {
+      useMapStore.getState().batchRemoveTiles(layer.id, tileIdsToRemove);
+    }
+    if (tilesToAdd.length > 0) {
+      useMapStore.getState().batchAddTiles(layer.id, tilesToAdd);
+    }
+  }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTileAt]);
+  
+  /**
    * Handle selection tool - select tiles
    */
   const handleSelectionTool = useCallback((gridX: number, gridY: number, isMultiSelect: boolean) => {
@@ -186,6 +253,9 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       case 'select':
         handleSelectionTool(gridX, gridY, e.evt.ctrlKey || e.evt.metaKey);
         break;
+      case 'box':
+        boxStartRef.current = { x: gridX, y: gridY };
+        break;
     }
   }, [editable, activeTool, screenToGrid, handleBrushTool, handleEraserTool, handleSelectionTool]);
   
@@ -202,6 +272,17 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     if (!pointer) return;
     
     const { gridX, gridY } = screenToGrid(pointer.x, pointer.y);
+    
+    // Handle box tool preview
+    if (activeTool === 'box' && boxStartRef.current) {
+      setBoxPreview({
+        startX: boxStartRef.current.x,
+        startY: boxStartRef.current.y,
+        endX: gridX,
+        endY: gridY,
+      });
+      return;
+    }
     
     // Only draw if we've moved to a new tile
     if (lastDrawnTileRef.current && 
@@ -226,14 +307,29 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
   /**
    * Handle mouse up event
    */
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    // Handle box paint completion
+    if (activeTool === 'box' && boxStartRef.current && isDrawingRef.current) {
+      const stage = e.target.getStage();
+      if (stage) {
+        const pointer = stage.getPointerPosition();
+        if (pointer) {
+          const { gridX, gridY } = screenToGrid(pointer.x, pointer.y);
+          handleBoxPaintTool(boxStartRef.current.x, boxStartRef.current.y, gridX, gridY);
+        }
+      }
+    }
+    
     isDrawingRef.current = false;
     lastDrawnTileRef.current = null;
-  }, []);
+    boxStartRef.current = null;
+    setBoxPreview(null);
+  }, [activeTool, screenToGrid, handleBoxPaintTool]);
   
   return {
     handleMouseDown,
     handleMouseMove,
     handleMouseUp,
+    boxPreview,
   };
 };

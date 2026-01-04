@@ -113,7 +113,6 @@ export const TilesPanel = () => {
 
   const handleSelectTile = (tileId: string, gridType: TileType) => {
     setSelectedTileDefinition(tileId, gridType);
-    setActiveTool("brush");
   };
 
   const handleDeleteTile = (tileId: string) => {

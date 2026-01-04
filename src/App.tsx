@@ -5,7 +5,7 @@ import { useMapStore } from './stores/mapStore';
 import { useToolStore } from './stores/toolStore';
 import { useUISelectionStore } from './stores/uiSelectionStore';
 import { useSampleTiles } from './utils/testHelpers';
-import { FiEdit2, FiTrash2, FiMousePointer, FiGrid } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiMousePointer, FiGrid, FiSquare } from 'react-icons/fi';
 
 function App() {
   const { map, createMap } = useMapStore();
@@ -16,7 +16,7 @@ function App() {
   // Create a test map on first load
   useEffect(() => {
     if (!map) {
-      createMap(50, 50, 16); // 20x15 tiles, 16px tile size
+      createMap(10, 10, 16); // 20x15 tiles, 16px tile size
     }
   }, [map, createMap]);
   
@@ -94,6 +94,19 @@ function App() {
               >
                 <FiMousePointer size={16} />
                 <span className="text-xs font-medium">Select</span>
+              </button>
+              
+              <button
+                onClick={() => setActiveTool('box')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded transition-colors ${
+                  activeTool === 'box'
+                    ? 'bg-purple-600 text-white'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                }`}
+                title="Box Paint Tool (Drag to paint area)"
+              >
+                <FiSquare size={16} />
+                <span className="text-xs font-medium">Box</span>
               </button>
             </div>
             
