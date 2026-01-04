@@ -75,15 +75,6 @@ export interface TileInstance {
   properties?: Record<string, any>;  // custom game data
 }
 
-/**
- * A grid of tiles - represents all tiles of a specific type in a layer
- * Separated by type so autotiling only affects relevant tiles
- */
-export interface TileGrid {
-  type: TileType;
-  tiles: Map<string, TileInstance>;  // key: "gridX,gridY"
-}
-
 // ============================================================================
 // PROP SYSTEM
 // ============================================================================
@@ -159,8 +150,9 @@ export interface MapLayer {
   depthIndex: number;         // 0 = bottom, higher = on top
   locked?: boolean;           // prevent editing
   
-  // Content
-  tileGrids: TileGrid[];      // separated by type (terrain, wall, overlay)
+  // Content - Flattened tile storage for O(1) lookups
+  tiles: Map<string, TileInstance>;      // key: "x,y,type" for coordinate lookups
+  tilesById: Map<string, TileInstance>;  // key: tile.id for ID-based lookups
   props: PropInstance[];
   
   // Metadata
@@ -249,18 +241,17 @@ export interface SerializedMapLayer {
   depthIndex: number;
   locked?: boolean;
   
-  tileGrids: SerializedTileGrid[];
+  tiles: {
+    key: string;               // "x,y,type"
+    value: TileInstance;
+  }[];
+  tilesById: {
+    key: string;               // tile.id
+    value: TileInstance;
+  }[];
   props: PropInstance[];
   
   metadata?: Record<string, any>;
-}
-
-export interface SerializedTileGrid {
-  type: TileType;
-  tiles: {
-    key: string;               // "gridX,gridY"
-    value: TileInstance;
-  }[];
 }
 
 // ============================================================================

@@ -194,16 +194,8 @@ export const LayersPanel = () => {
       visible: true,
       opacity: 1,
       depthIndex: map.layers.length,
-      tileGrids: [
-        {
-          type: "terrain",
-          tiles: new Map(),
-        },
-        {
-          type: "overlay",
-          tiles: new Map(),
-        },
-      ],
+      tiles: new Map(),
+      tilesById: new Map(),
       props: [],
     };
     addLayer(newLayer);

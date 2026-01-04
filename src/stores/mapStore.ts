@@ -12,6 +12,7 @@ import type {
   BaseTileDefinition,
   OverlayTileDefinition,
   PropDefinition,
+  TileType,
 } from '../types/map';
 
 // ============================================================================
@@ -35,10 +36,15 @@ interface MapState {
   
   // Tile operations
   addTile: (layerId: string, tile: TileInstance) => void;
-  removeTile: (layerId: string, tileGridType: string, tileId: string) => void;
-  updateTile: (layerId: string, tileGridType: string, tileId: string, changes: Partial<TileInstance>) => void;
-  getTile: (layerId: string, gridX: number, gridY: number) => TileInstance | undefined;
-  getTilesByGridType: (layerId: string, gridType: string) => TileInstance[];
+  removeTile: (layerId: string, tileId: string) => void;
+  updateTile: (layerId: string, tileId: string, changes: Partial<TileInstance>) => void;
+  getTileAt: (layerId: string, gridX: number, gridY: number, type: TileType) => TileInstance | undefined;
+  getNeighbors: (layerId: string, gridX: number, gridY: number, type: TileType) => TileInstance[];
+  getTilesByType: (layerId: string, type: TileType) => TileInstance[];
+  
+  // Batch operations for performance
+  batchAddTiles: (layerId: string, tiles: TileInstance[]) => void;
+  batchRemoveTiles: (layerId: string, tileIds: string[]) => void;
   
   // Prop operations
   addProp: (layerId: string, prop: PropInstance) => void;
@@ -72,7 +78,7 @@ export const useMapStore = create<MapState>()(
           height,
           tileSize,
           layers: [
-            // Add a default layer with terrain and overlay grids
+            // Add a default layer with flattened tile storage
             {
               id: crypto.randomUUID(),
               name: 'Ground',
@@ -80,16 +86,8 @@ export const useMapStore = create<MapState>()(
               visible: true,
               opacity: 1,
               depthIndex: 0,
-              tileGrids: [
-                {
-                  type: 'terrain',
-                  tiles: new Map(),
-                },
-                {
-                  type: 'overlay',
-                  tiles: new Map(),
-                }
-              ],
+              tiles: new Map(),
+              tilesById: new Map(),
               props: [],
             }
           ],
@@ -126,6 +124,13 @@ export const useMapStore = create<MapState>()(
     removeLayer: (layerId) =>
       set((state) => {
         if (state.map) {
+          // Find layer and clear its Maps to prevent memory leaks
+          const layer = state.map.layers.find((l) => l.id === layerId);
+          if (layer) {
+            layer.tiles.clear();
+            layer.tilesById.clear();
+          }
+          
           state.map.layers = state.map.layers.filter((l) => l.id !== layerId);
           state.map.lastModified = new Date();
         }
@@ -162,76 +167,156 @@ export const useMapStore = create<MapState>()(
         if (state.map) {
           const layer = state.map.layers.find((l) => l.id === layerId);
           if (layer) {
-            const tileGrid = layer.tileGrids.find((tg) => tg.type === tile.type);
-            if (tileGrid) {
-              const key = `${tile.gridX},${tile.gridY}`;
-              tileGrid.tiles.set(key, tile);
-            }
+            // Composite key: "x,y,type"
+            const coordKey = `${tile.gridX},${tile.gridY},${tile.type}`;
+            layer.tiles.set(coordKey, tile);
+            layer.tilesById.set(tile.id, tile);
             state.map.lastModified = new Date();
           }
         }
       }),
     
-    removeTile: (layerId, tileGridType, tileId) =>
+    removeTile: (layerId, tileId) =>
       set((state) => {
         if (state.map) {
           const layer = state.map.layers.find((l) => l.id === layerId);
           if (layer) {
-            const tileGrid = layer.tileGrids.find((tg) => tg.type === tileGridType);
-            if (tileGrid) {
-              // Find and remove by tileId
-              for (const [key, tile] of tileGrid.tiles.entries()) {
-                if (tile.id === tileId) {
-                  tileGrid.tiles.delete(key);
-                  break;
-                }
-              }
+            // O(1) lookup by ID
+            const tile = layer.tilesById.get(tileId);
+            if (tile) {
+              const coordKey = `${tile.gridX},${tile.gridY},${tile.type}`;
+              layer.tiles.delete(coordKey);
+              layer.tilesById.delete(tileId);
               state.map.lastModified = new Date();
             }
           }
         }
       }),
     
-    updateTile: (layerId, tileGridType, tileId, changes) =>
+    updateTile: (layerId, tileId, changes) =>
       set((state) => {
         if (state.map) {
           const layer = state.map.layers.find((l) => l.id === layerId);
           if (layer) {
-            const tileGrid = layer.tileGrids.find((tg) => tg.type === tileGridType);
-            if (tileGrid) {
-              for (const tile of tileGrid.tiles.values()) {
-                if (tile.id === tileId) {
-                  Object.assign(tile, changes);
-                  state.map.lastModified = new Date();
-                  break;
-                }
+            // O(1) lookup by ID
+            const tile = layer.tilesById.get(tileId);
+            if (tile) {
+              // Check if coordinate or type changes (affects Map key)
+              const coordChanged = 
+                (changes.gridX !== undefined && changes.gridX !== tile.gridX) ||
+                (changes.gridY !== undefined && changes.gridY !== tile.gridY) ||
+                (changes.type !== undefined && changes.type !== tile.type);
+              
+              if (coordChanged) {
+                // Remove old key from tiles Map
+                const oldKey = `${tile.gridX},${tile.gridY},${tile.type}`;
+                layer.tiles.delete(oldKey);
+                
+                // Update tile properties
+                Object.assign(tile, changes);
+                
+                // Add with new key to tiles Map
+                const newKey = `${tile.gridX},${tile.gridY},${tile.type}`;
+                layer.tiles.set(newKey, tile);
+              } else {
+                // No coordinate change, just update properties
+                Object.assign(tile, changes);
               }
+              
+              state.map.lastModified = new Date();
             }
           }
         }
       }),
     
-    getTile: (layerId, gridX, gridY) => {
+    getTileAt: (layerId, gridX, gridY, type) => {
       const state = get();
       const layer = state.map?.layers.find((l) => l.id === layerId);
       if (!layer) return undefined;
       
-      const key = `${gridX},${gridY}`;
-      for (const tileGrid of layer.tileGrids) {
-        const tile = tileGrid.tiles.get(key);
-        if (tile) return tile;
-      }
-      return undefined;
+      // O(1) lookup with composite key
+      const key = `${gridX},${gridY},${type}`;
+      return layer.tiles.get(key);
     },
     
-    getTilesByGridType: (layerId, gridType) => {
+    getNeighbors: (layerId, gridX, gridY, type) => {
       const state = get();
       const layer = state.map?.layers.find((l) => l.id === layerId);
       if (!layer) return [];
       
-      const tileGrid = layer.tileGrids.find((tg) => tg.type === gridType);
-      return tileGrid ? Array.from(tileGrid.tiles.values()) : [];
+      const neighbors: TileInstance[] = [];
+      const offsets = [
+        { dx: 0, dy: -1 },   // top
+        { dx: 1, dy: -1 },   // topRight
+        { dx: 1, dy: 0 },    // right
+        { dx: 1, dy: 1 },    // bottomRight
+        { dx: 0, dy: 1 },    // bottom
+        { dx: -1, dy: 1 },   // bottomLeft
+        { dx: -1, dy: 0 },   // left
+        { dx: -1, dy: -1 },  // topLeft
+      ];
+      
+      for (const { dx, dy } of offsets) {
+        const nx = gridX + dx;
+        const ny = gridY + dy;
+        const key = `${nx},${ny},${type}`;
+        const neighbor = layer.tiles.get(key);
+        if (neighbor) {
+          neighbors.push(neighbor);
+        }
+      }
+      
+      return neighbors;
     },
+    
+    getTilesByType: (layerId, type) => {
+      const state = get();
+      const layer = state.map?.layers.find((l) => l.id === layerId);
+      if (!layer) return [];
+      
+      const tiles: TileInstance[] = [];
+      for (const tile of layer.tilesById.values()) {
+        if (tile.type === type) {
+          tiles.push(tile);
+        }
+      }
+      return tiles;
+    },
+    
+    batchAddTiles: (layerId, tiles) =>
+      set((state) => {
+        if (state.map) {
+          const layer = state.map.layers.find((l) => l.id === layerId);
+          if (layer) {
+            // Batch add all tiles in a single state update
+            for (const tile of tiles) {
+              const coordKey = `${tile.gridX},${tile.gridY},${tile.type}`;
+              layer.tiles.set(coordKey, tile);
+              layer.tilesById.set(tile.id, tile);
+            }
+            state.map.lastModified = new Date();
+          }
+        }
+      }),
+    
+    batchRemoveTiles: (layerId, tileIds) =>
+      set((state) => {
+        if (state.map) {
+          const layer = state.map.layers.find((l) => l.id === layerId);
+          if (layer) {
+            // Batch remove all tiles in a single state update
+            for (const tileId of tileIds) {
+              const tile = layer.tilesById.get(tileId);
+              if (tile) {
+                const coordKey = `${tile.gridX},${tile.gridY},${tile.type}`;
+                layer.tiles.delete(coordKey);
+                layer.tilesById.delete(tileId);
+              }
+            }
+            state.map.lastModified = new Date();
+          }
+        }
+      }),
     
     addProp: (layerId, prop) =>
       set((state) => {

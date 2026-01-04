@@ -255,6 +255,8 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
               key={layer.id} 
               layer={layer}
               tileSize={map.tileSize}
+              canvasWidth={dimensions.width}
+              canvasHeight={dimensions.height}
             />
           ))
         }

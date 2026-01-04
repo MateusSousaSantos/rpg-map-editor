@@ -4,7 +4,7 @@ import { useMapStore } from '../stores/mapStore';
 import { useToolStore } from '../stores/toolStore';
 import { useUISelectionStore } from '../stores/uiSelectionStore';
 import { useViewportStore } from '../stores/viewportStore';
-import type { TileInstance } from '../types/map';
+import type { TileInstance, TileType } from '../types/map';
 
 interface CanvasEventsParams {
   tileSize: number;
@@ -25,7 +25,7 @@ interface CanvasEventsParams {
  */
 export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
   const { activeTool, selectedTileDefinitionId, selectedTileGridType } = useToolStore();
-  const { addTile, removeTile, getTile, map } = useMapStore();
+  const { addTile, removeTile, getTileAt, map } = useMapStore();
   const { zoom, panX, panY } = useViewportStore();
   const { selectTiles, toggleTileSelection, clearSelection, selectedLayerId } = useUISelectionStore();
   
@@ -68,8 +68,8 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       : map.layers[0];
     if (!layer || layer.locked) return;
     
-    // Check if tile already exists at this position
-    const existingTile = getTile(layer.id, gridX, gridY);
+    // Check if tile already exists at this position for this type
+    const existingTile = getTileAt(layer.id, gridX, gridY, selectedTileGridType as TileType);
     
     // Don't place if same tile already exists
     if (existingTile && 
@@ -79,8 +79,8 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     }
     
     // Remove existing tile of the same type if it exists
-    if (existingTile && existingTile.type === selectedTileGridType) {
-      removeTile(layer.id, selectedTileGridType, existingTile.id);
+    if (existingTile) {
+      removeTile(layer.id, existingTile.id);
     }
     
     // Create new tile
@@ -93,7 +93,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     };
     
     addTile(layer.id, newTile);
-  }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTile, addTile, removeTile]);
+  }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTileAt, addTile, removeTile]);
   
   /**
    * Handle eraser tool - remove tiles
@@ -109,14 +109,14 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     if (!layer || layer.locked) return;
     
     // Find and remove ALL tiles at this position (terrain, overlay, wall)
-    const key = `${gridX},${gridY}`;
-    layer.tileGrids.forEach((tileGrid) => {
-      const tile = tileGrid.tiles.get(key);
+    const tileTypes: TileType[] = ['terrain', 'overlay', 'wall'];
+    tileTypes.forEach((type) => {
+      const tile = getTileAt(layer.id, gridX, gridY, type);
       if (tile) {
-        removeTile(layer.id, tile.type, tile.id);
+        removeTile(layer.id, tile.id);
       }
     });
-  }, [map, selectedLayerId, isInBounds, removeTile]);
+  }, [map, selectedLayerId, isInBounds, getTileAt, removeTile]);
   
   /**
    * Handle selection tool - select tiles
@@ -131,8 +131,13 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       : map.layers[0];
     if (!layer) return;
     
-    // Find tile at this position
-    const tile = getTile(layer.id, gridX, gridY);
+    // Find tile at this position - check all types, prioritize overlay > wall > terrain
+    const tileTypes: TileType[] = ['overlay', 'wall', 'terrain'];
+    let tile: TileInstance | undefined;
+    for (const type of tileTypes) {
+      tile = getTileAt(layer.id, gridX, gridY, type);
+      if (tile) break;
+    }
     
     if (tile) {
       if (isMultiSelect) {
@@ -145,7 +150,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         clearSelection();
       }
     }
-  }, [map, selectedLayerId, isInBounds, getTile, toggleTileSelection, selectTiles, clearSelection]);
+  }, [map, selectedLayerId, isInBounds, getTileAt, toggleTileSelection, selectTiles, clearSelection]);
   
   /**
    * Handle mouse down event

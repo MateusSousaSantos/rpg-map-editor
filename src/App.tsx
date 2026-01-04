@@ -16,7 +16,7 @@ function App() {
   // Create a test map on first load
   useEffect(() => {
     if (!map) {
-      createMap(10, 10, 16); // 20x15 tiles, 16px tile size
+      createMap(50, 50, 16); // 20x15 tiles, 16px tile size
     }
   }, [map, createMap]);
   
