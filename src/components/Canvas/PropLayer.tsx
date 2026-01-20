@@ -8,7 +8,7 @@
  * - Interactive resize and rotation handles
  */
 
-import { Layer, Group, Image, Transformer } from 'react-konva';
+import { Group, Image, Transformer } from 'react-konva';
 import { useEffect, useState, useRef } from 'react';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
 import type { MapLayer, PropInstance } from '../../types/map';
@@ -20,8 +20,13 @@ interface PropLayerProps {
 }
 
 export const PropLayer = ({ layer }: PropLayerProps) => {
-  // Sort props by z-index (lowest to highest, so highest renders on top)
-  const sortedProps = [...layer.props].sort((a, b) => a.zIndex - b.zIndex);
+  // Sort props by global depth: (layer.depthIndex * 10000) + prop.zIndex
+  // This ensures props in lower layers always appear beneath props in higher layers
+  const sortedProps = [...layer.props].sort((a, b) => {
+    const globalDepthA = layer.depthIndex * 10000 + a.zIndex;
+    const globalDepthB = layer.depthIndex * 10000 + b.zIndex;
+    return globalDepthA - globalDepthB;
+  });
   const selectedPropIds = useUISelectionStore((state) => state.selectedPropIds);
   const transformerRef = useRef<Konva.Transformer>(null);
   const groupRefs = useRef<Map<string, Konva.Group>>(new Map());
@@ -46,12 +51,13 @@ export const PropLayer = ({ layer }: PropLayerProps) => {
   }, [selectedPropIds, sortedProps]);
   
   return (
-    <Layer imageSmoothingEnabled={false}>
+    <>
       {sortedProps.map(prop => (
         <PropGroup 
           key={prop.id} 
           prop={prop} 
           layerId={layer.id}
+          layerOpacity={layer.opacity}
           onMount={(node) => groupRefs.current.set(prop.id, node)}
           onUnmount={() => groupRefs.current.delete(prop.id)}
         />
@@ -72,7 +78,7 @@ export const PropLayer = ({ layer }: PropLayerProps) => {
         rotationSnaps={[0, 45, 90, 135, 180, 225, 270, 315]}
         rotationSnapTolerance={5}
       />
-    </Layer>
+    </>
   );
 };
 
@@ -82,11 +88,12 @@ export const PropLayer = ({ layer }: PropLayerProps) => {
 interface PropGroupProps {
   prop: PropInstance;
   layerId: string;
+  layerOpacity: number;
   onMount: (node: Konva.Group) => void;
   onUnmount: () => void;
 }
 
-const PropGroup = ({ prop, layerId, onMount, onUnmount }: PropGroupProps) => {
+const PropGroup = ({ prop, layerId, layerOpacity, onMount, onUnmount }: PropGroupProps) => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const { selectProps, togglePropSelection } = useUISelectionStore();
   const selectedPropIds = useUISelectionStore((state) => state.selectedPropIds);
@@ -198,7 +205,7 @@ const PropGroup = ({ prop, layerId, onMount, onUnmount }: PropGroupProps) => {
       rotation={prop.rotation}
       scaleX={prop.scaleX}
       scaleY={prop.scaleY}
-      opacity={prop.opacity}
+      opacity={prop.opacity * layerOpacity}
       draggable={!prop.locked}
       onClick={handleClick}
       onTap={handleClick}

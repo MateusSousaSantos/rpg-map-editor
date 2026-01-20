@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { Layer, Image as KonvaImage, Rect } from 'react-konva';
+import { Image as KonvaImage, Rect } from 'react-konva';
 import Konva from 'konva';
 import type { MapLayer, TileInstance, BaseTileDefinition, OverlayTileDefinition, MapDocument } from '../../types/map';
 import { useMapStore } from '../../stores/mapStore';
@@ -97,11 +97,7 @@ export const TileLayer = ({ layer, tileSize, canvasWidth = 800, canvasHeight = 6
   if (!map || !currentLayer || !currentLayer.visible) return null;
   
   return (
-    <Layer 
-      opacity={currentLayer.opacity}
-      imageSmoothingEnabled={false}
-      listening={false}
-    >
+    <>
       {visibleTiles.map((tile) => (
         <TileRenderer
           key={tile.id}
@@ -109,9 +105,10 @@ export const TileLayer = ({ layer, tileSize, canvasWidth = 800, canvasHeight = 6
           tileSize={tileSize}
           map={map}
           isSelected={selectedTileIds.has(tile.id)}
+          layerOpacity={currentLayer.opacity}
         />
       ))}
-    </Layer>
+    </>
   );
 };
 
@@ -120,6 +117,7 @@ interface TileRendererProps {
   tileSize: number;
   map: MapDocument;
   isSelected: boolean;
+  layerOpacity: number;
 }
 
 /**
@@ -128,7 +126,7 @@ interface TileRendererProps {
  * OPTIMIZATION 2: Texture Caching
  * OPTIMIZATION 3: Layer Pooling (Konva shape reuse via React reconciliation)
  */
-const TileRenderer = ({ tile, tileSize, map, isSelected }: TileRendererProps) => {
+const TileRenderer = ({ tile, tileSize, map, isSelected, layerOpacity }: TileRendererProps) => {
   const loadTexture = useTextureCache((state) => state.loadTexture);
   const getTexture = useTextureCache((state) => state.getTexture);
   const [imageError, setImageError] = useState(false);
@@ -179,9 +177,10 @@ const TileRenderer = ({ tile, tileSize, map, isSelected }: TileRendererProps) =>
   const width = Math.round(tileSize);
   const height = Math.round(tileSize);
   
-  // Get opacity (instance override or definition default or layer default)
-  const opacity = tile.opacity ?? 
+  // Get opacity (instance override or definition default, then multiply by layer opacity)
+  const tileOpacity = tile.opacity ?? 
     (definition.type === 'overlay' ? (definition as OverlayTileDefinition).opacity ?? 1 : 1);
+  const opacity = tileOpacity * layerOpacity;
   
   // Get rotation (0, 90, 180, 270)
   const rotation = tile.rotation ?? 0;

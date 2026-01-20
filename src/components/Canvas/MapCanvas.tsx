@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Stage } from 'react-konva';
+import { Stage, Layer } from 'react-konva';
 import Konva from 'konva';
 import { useMapStore } from '../../stores/mapStore';
 import { useViewportStore } from '../../stores/viewportStore';
@@ -303,33 +303,30 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
         onMouseUp={canvasEvents.handleMouseUp}
         onMouseLeave={handleStageMouseLeave}
       >
-        {/* Tile Layers - Render all layers sorted by depth */}
-        {map.layers
-          .slice()
-          .sort((a, b) => a.depthIndex - b.depthIndex)
-          .filter(layer => layer.type === 'tile')
-          .map(layer => (
-            <TileLayer 
-              key={layer.id} 
-              layer={layer}
-              tileSize={map.tileSize}
-              canvasWidth={dimensions.width}
-              canvasHeight={dimensions.height}
-            />
-          ))
-        }
-        
-        {/* Prop Layers - Render props from all layers */}
-        {map.layers
-          .slice()
-          .sort((a, b) => a.depthIndex - b.depthIndex)
-          .map(layer => (
-            <PropLayer 
-              key={`props-${layer.id}`}
-              layer={layer}
-            />
-          ))
-        }
+        {/* Single Layer for all tiles and props - Render in depth order (tiles and props interleaved by layer) */}
+        <Layer imageSmoothingEnabled={false}>
+          {map.layers
+            .slice()
+            .sort((a, b) => a.depthIndex - b.depthIndex)
+            .flatMap(layer => [
+              /* Render tiles for this layer */
+              layer.type === 'tile' && (
+                <TileLayer 
+                  key={layer.id}
+                  layer={layer}
+                  tileSize={map.tileSize}
+                  canvasWidth={dimensions.width}
+                  canvasHeight={dimensions.height}
+                />
+              ),
+              /* Render props for this layer */
+              <PropLayer 
+                key={`props-${layer.id}`}
+                layer={layer}
+              />
+            ].filter(Boolean))
+          }
+        </Layer>
         
         {/* Cursor Preview Layer - Shows what will be placed */}
         {editable && (
