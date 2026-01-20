@@ -22,7 +22,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useMapStore } from '../../stores/mapStore';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
-import { FiEye, FiEyeOff, FiChevronDown, FiChevronRight, FiPackage, FiLayers } from 'react-icons/fi';
+import { FiEye, FiEyeOff, FiChevronDown, FiChevronRight, FiPackage, FiLayers, FiTrash } from 'react-icons/fi';
 import { FaGripVertical } from 'react-icons/fa';
 import type { PropInstance, MapLayer } from '../../types/map';
 
@@ -31,9 +31,10 @@ interface PropItemProps {
   layerId: string;
   isSelected: boolean;
   onSelect: (propId: string) => void;
+  onDelete?: (propId: string) => void;
 }
 
-const PropItem = ({ prop, layerId, isSelected, onSelect }: PropItemProps) => {
+const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemProps) => {
   const updateProp = useMapStore((state) => state.updateProp);
   const propDefinitions = useMapStore((state) => state.map?.propDefinitions || []);
   
@@ -95,6 +96,12 @@ const PropItem = ({ prop, layerId, isSelected, onSelect }: PropItemProps) => {
       >
         {prop.visible ? <FiEye size={14} /> : <FiEyeOff size={14} />}
       </button>
+      <button onClick={(e)=> {
+        e.stopPropagation();
+        if (onDelete) onDelete(prop.id);
+      }}>
+        <FiTrash size={14} className="text-slate-500 hover:text-red-500 transition-colors" />
+      </button>
     </div>
   );
 };
@@ -107,6 +114,7 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const { selectedPropIds, selectProps, togglePropSelection } = useUISelectionStore();
   const updateProp = useMapStore((state) => state.updateProp);
+  const removeProp = useMapStore((state) => state.removeProp);
   
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -191,6 +199,7 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
                   layerId={layer.id}
                   isSelected={selectedPropIds.has(prop.id)}
                   onSelect={(propId) => handlePropSelect(propId, false)}
+                  onDelete={(propId) => removeProp(layer.id, propId)}
                 />
               ))}
             </SortableContext>
