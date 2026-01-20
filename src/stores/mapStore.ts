@@ -4,6 +4,9 @@
 
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+
+import { persist, createJSONStorage } from 'zustand/middleware'
+
 import type {
   MapDocument,
   MapLayer,
@@ -63,38 +66,39 @@ interface MapState {
 }
 
 export const useMapStore = create<MapState>()(
-  immer((set, get) => ({
-    map: null,
-    
-    createMap: (width, height, tileSize) =>
-      set((state) => {
-        state.map = {
-          id: crypto.randomUUID(),
-          name: 'Untitled Map',
-          version: '1.0',
-          createdAt: new Date(),
-          lastModified: new Date(),
-          width,
-          height,
-          tileSize,
-          layers: [
-            // Add a default layer with flattened tile storage
-            {
-              id: crypto.randomUUID(),
-              name: 'Ground',
-              type: 'tile',
-              visible: true,
-              opacity: 1,
-              depthIndex: 0,
-              tiles: new Map(),
-              tilesById: new Map(),
-              props: [],
-            }
-          ],
-          tileDefinitions: [],
-          propDefinitions: [],
-        };
-      }),
+  persist(
+    immer((set, get) => ({
+      map: null,
+      
+      createMap: (width, height, tileSize) =>
+        set((state) => {
+          state.map = {
+            id: crypto.randomUUID(),
+            name: 'Untitled Map',
+            version: '1.0',
+            createdAt: new Date(),
+            lastModified: new Date(),
+            width,
+            height,
+            tileSize,
+            layers: [
+              // Add a default layer with flattened tile storage
+              {
+                id: crypto.randomUUID(),
+                name: 'Ground',
+                type: 'tile',
+                visible: true,
+                opacity: 1,
+                depthIndex: 0,
+                tiles: new Map(),
+                tilesById: new Map(),
+                props: [],
+              }
+            ],
+            tileDefinitions: [],
+            propDefinitions: [],
+          };
+        }),
     
     loadMap: (mapData) =>
       set((state) => {
@@ -421,5 +425,39 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-  }))
+    })),
+    {
+      name: 'rpg-map-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        map: state.map ? {
+          ...state.map,
+          layers: state.map.layers.map(layer => ({
+            ...layer,
+            tiles: Array.from(layer.tiles.entries()),
+            tilesById: Array.from(layer.tilesById.entries()),
+          })),
+        } : null,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state?.map) {
+          // Restore Date objects
+          if (state.map.createdAt) {
+            state.map.createdAt = new Date(state.map.createdAt);
+          }
+          if (state.map.lastModified) {
+            state.map.lastModified = new Date(state.map.lastModified);
+          }
+          // Restore Maps from arrays
+          if (state.map.layers) {
+            state.map.layers = state.map.layers.map((layer: any) => ({
+              ...layer,
+              tiles: new Map(layer.tiles || []),
+              tilesById: new Map(layer.tilesById || []),
+            }));
+          }
+        }
+      },
+    }
+  )
 );
