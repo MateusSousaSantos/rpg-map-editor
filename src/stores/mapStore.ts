@@ -23,13 +23,25 @@ import type {
 // ============================================================================
 
 interface MapState {
-  // Map document
+  // Map document (current working copy)
   map: MapDocument | null;
+  
+  // All saved maps
+  savedMaps: Map<string, MapDocument>;
+  
+  // ID of currently loaded map
+  currentMapId: string | null;
   
   // Actions
   createMap: (name: string, width: number, height: number, tileSize: number) => void;
   loadMap: (mapData: MapDocument) => void;
   updateMapMetadata: (changes: Partial<Pick<MapDocument, 'name' | 'width' | 'height' | 'tileSize'>>) => void;
+  
+  // Map management
+  saveMap: (map: MapDocument) => void;
+  loadMapById: (mapId: string) => void;
+  deleteMapById: (mapId: string) => void;
+  getAllMaps: () => MapDocument[];
   
   // Layer management
   addLayer: (layer: MapLayer) => void;
@@ -69,10 +81,12 @@ export const useMapStore = create<MapState>()(
   persist(
     immer((set, get) => ({
       map: null,
+      savedMaps: new Map(),
+      currentMapId: null,
       
       createMap: (name, width, height, tileSize) =>
         set((state) => {
-          state.map = {
+          const newMap: MapDocument = {
             id: crypto.randomUUID(),
             name,
             version: '1.0',
@@ -98,6 +112,13 @@ export const useMapStore = create<MapState>()(
             tileDefinitions: [],
             propDefinitions: [],
           };
+          
+          // Save to savedMaps
+          state.savedMaps.set(newMap.id, newMap);
+          
+          // Set as current
+          state.map = newMap;
+          state.currentMapId = newMap.id;
         }),
     
     loadMap: (mapData) =>
@@ -109,11 +130,55 @@ export const useMapStore = create<MapState>()(
         };
       }),
     
+    saveMap: (map) =>
+      set((state) => {
+        map.lastModified = new Date();
+        state.savedMaps.set(map.id, map);
+        state.map = map;
+        state.currentMapId = map.id;
+      }),
+    
+    loadMapById: (mapId) =>
+      set((state) => {
+        const mapToLoad = state.savedMaps.get(mapId);
+        if (mapToLoad) {
+          state.map = {
+            ...mapToLoad,
+            createdAt: new Date(mapToLoad.createdAt),
+            lastModified: new Date(mapToLoad.lastModified),
+            layers: mapToLoad.layers.map(layer => ({
+              ...layer,
+              tiles: new Map(layer.tiles),
+              tilesById: new Map(layer.tilesById),
+            })),
+          };
+          state.currentMapId = mapId;
+        }
+      }),
+    
+    deleteMapById: (mapId) =>
+      set((state) => {
+        state.savedMaps.delete(mapId);
+        if (state.currentMapId === mapId) {
+          state.map = null;
+          state.currentMapId = null;
+        }
+      }),
+    
+    getAllMaps: () => {
+      const state = get();
+      return Array.from(state.savedMaps.values());
+    },
+    
     updateMapMetadata: (changes) =>
       set((state) => {
         if (state.map) {
           Object.assign(state.map, changes);
           state.map.lastModified = new Date();
+          // Update in savedMaps
+          if (state.currentMapId) {
+            state.savedMaps.set(state.currentMapId, state.map);
+          }
         }
       }),
     
@@ -122,6 +187,10 @@ export const useMapStore = create<MapState>()(
         if (state.map) {
           state.map.layers.push(layer);
           state.map.lastModified = new Date();
+          // Sync to savedMaps
+          if (state.currentMapId) {
+            state.savedMaps.set(state.currentMapId, state.map);
+          }
         }
       }),
     
@@ -137,6 +206,10 @@ export const useMapStore = create<MapState>()(
           
           state.map.layers = state.map.layers.filter((l) => l.id !== layerId);
           state.map.lastModified = new Date();
+          // Sync to savedMaps
+          if (state.currentMapId) {
+            state.savedMaps.set(state.currentMapId, state.map);
+          }
         }
       }),
     
@@ -147,6 +220,10 @@ export const useMapStore = create<MapState>()(
           if (layer) {
             Object.assign(layer, changes);
             state.map.lastModified = new Date();
+            // Sync to savedMaps
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
           }
         }
       }),
@@ -163,6 +240,10 @@ export const useMapStore = create<MapState>()(
             layer.depthIndex = index;
           });
           state.map.lastModified = new Date();
+          // Sync to savedMaps
+          if (state.currentMapId) {
+            state.savedMaps.set(state.currentMapId, state.map);
+          }
         }
       }),
     
@@ -176,6 +257,10 @@ export const useMapStore = create<MapState>()(
             layer.tiles.set(coordKey, tile);
             layer.tilesById.set(tile.id, tile);
             state.map.lastModified = new Date();
+            // Sync to savedMaps
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
           }
         }
       }),
@@ -192,6 +277,10 @@ export const useMapStore = create<MapState>()(
               layer.tiles.delete(coordKey);
               layer.tilesById.delete(tileId);
               state.map.lastModified = new Date();
+              // Sync to savedMaps
+              if (state.currentMapId) {
+                state.savedMaps.set(state.currentMapId, state.map);
+              }
             }
           }
         }
@@ -228,6 +317,10 @@ export const useMapStore = create<MapState>()(
               }
               
               state.map.lastModified = new Date();
+              // Sync to savedMaps
+              if (state.currentMapId) {
+                state.savedMaps.set(state.currentMapId, state.map);
+              }
             }
           }
         }
@@ -299,6 +392,10 @@ export const useMapStore = create<MapState>()(
               layer.tilesById.set(tile.id, tile);
             }
             state.map.lastModified = new Date();
+            // Sync to savedMaps
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
           }
         }
       }),
@@ -318,6 +415,10 @@ export const useMapStore = create<MapState>()(
               }
             }
             state.map.lastModified = new Date();
+            // Sync to savedMaps
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
           }
         }
       }),
@@ -329,6 +430,10 @@ export const useMapStore = create<MapState>()(
           if (layer) {
             layer.props.push(prop);
             state.map.lastModified = new Date();
+            // Sync to savedMaps
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
           }
         }
       }),
@@ -340,6 +445,10 @@ export const useMapStore = create<MapState>()(
           if (layer) {
             layer.props = layer.props.filter((p) => p.id !== propId);
             state.map.lastModified = new Date();
+            // Sync to savedMaps
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
           }
         }
       }),
@@ -353,6 +462,10 @@ export const useMapStore = create<MapState>()(
             if (prop) {
               Object.assign(prop, changes);
               state.map.lastModified = new Date();
+              // Sync to savedMaps
+              if (state.currentMapId) {
+                state.savedMaps.set(state.currentMapId, state.map);
+              }
             }
           }
         }
@@ -438,6 +551,18 @@ export const useMapStore = create<MapState>()(
             tilesById: Array.from(layer.tilesById.entries()),
           })),
         } : null,
+        savedMaps: Array.from(state.savedMaps.entries()).map(([id, map]) => [
+          id,
+          {
+            ...map,
+            layers: map.layers.map(layer => ({
+              ...layer,
+              tiles: Array.from(layer.tiles.entries()),
+              tilesById: Array.from(layer.tilesById.entries()),
+            })),
+          }
+        ]),
+        currentMapId: state.currentMapId,
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.map) {
@@ -456,6 +581,26 @@ export const useMapStore = create<MapState>()(
               tilesById: new Map(layer.tilesById || []),
             }));
           }
+        }
+        
+        // Restore savedMaps
+        if (state?.savedMaps && Array.isArray(state.savedMaps)) {
+          const mapsArray = state.savedMaps as any[];
+          state.savedMaps = new Map(
+            mapsArray.map(([id, map]: any) => [
+              id,
+              {
+                ...map,
+                createdAt: new Date(map.createdAt),
+                lastModified: new Date(map.lastModified),
+                layers: map.layers.map((layer: any) => ({
+                  ...layer,
+                  tiles: new Map(layer.tiles || []),
+                  tilesById: new Map(layer.tilesById || []),
+                })),
+              }
+            ])
+          );
         }
       },
     }

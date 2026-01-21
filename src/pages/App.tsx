@@ -13,6 +13,7 @@ import {
   FiGrid,
   FiSquare,
 } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
 function App() {
   const { map } = useMapStore();
@@ -37,9 +38,11 @@ function App() {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col bg-slate-950 min-w-0">
         <header className="h-12 border-b border-slate-800 bg-slate-900/80 flex items-center px-4 justify-between">
+        <Link to="/">
           <h1 className="text-sm font-semibold text-slate-100">
             RPG Map Editor
           </h1>
+        </Link>
         </header>
 
         {/* Simple Toolbar for Phase 3 Demo */}
