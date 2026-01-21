@@ -27,7 +27,7 @@ interface MapState {
   map: MapDocument | null;
   
   // Actions
-  createMap: (width: number, height: number, tileSize: number) => void;
+  createMap: (name: string, width: number, height: number, tileSize: number) => void;
   loadMap: (mapData: MapDocument) => void;
   updateMapMetadata: (changes: Partial<Pick<MapDocument, 'name' | 'width' | 'height' | 'tileSize'>>) => void;
   
@@ -70,11 +70,11 @@ export const useMapStore = create<MapState>()(
     immer((set, get) => ({
       map: null,
       
-      createMap: (width, height, tileSize) =>
+      createMap: (name, width, height, tileSize) =>
         set((state) => {
           state.map = {
             id: crypto.randomUUID(),
-            name: 'Untitled Map',
+            name,
             version: '1.0',
             createdAt: new Date(),
             lastModified: new Date(),

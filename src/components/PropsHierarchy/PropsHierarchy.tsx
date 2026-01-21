@@ -232,7 +232,7 @@ export const PropsHierarchy = () => {
 
   return (
     <aside
-      className={`h-full bg-slate-900 border-r border-slate-800 transition-all duration-300 ease-in-out shrink-0 flex flex-col ${
+      className={`h-full bg-slate-900 border-r border-slate-800 transition-all duration-300 ease-in-out flex flex-col ${
         isOpen ? 'w-64' : 'w-12'
       }`}
     >

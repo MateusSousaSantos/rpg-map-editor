@@ -1,16 +1,16 @@
-import { useUISelectionStore } from '../../stores/uiSelectionStore';
-import { FiChevronRight, FiChevronLeft } from 'react-icons/fi';
-import { LayersPanel } from './LayersPanel';
-import { TilesPanel } from './TilesPanel';
-import { PropsPanel } from './PropsPanel';
+import { useUISelectionStore } from "../../stores/uiSelectionStore";
+import { FiChevronRight, FiChevronLeft } from "react-icons/fi";
+import { LayersPanel } from "./LayersPanel";
+import { TilesPanel } from "./TilesPanel";
+import { PropsPanel } from "./PropsPanel";
 
 export const Sidebar = () => {
   const { sidebarOpen, toggleSidebar } = useUISelectionStore();
 
   return (
     <aside
-      className={`h-full bg-slate-900 border-l border-slate-800 transition-all duration-300 ease-in-out shrink-0 flex flex-col ${
-        sidebarOpen ? 'w-80' : 'w-12'
+      className={`h-full bg-slate-900 border-r border-slate-800 transition-all duration-300 ease-in-out flex flex-col ${
+        sidebarOpen ? "w-80" : "w-12"
       }`}
     >
       {sidebarOpen ? (
@@ -34,7 +34,7 @@ export const Sidebar = () => {
             <div className="space-y-6">
               {/* Tiles Panel */}
               <TilesPanel />
-              
+
               {/* Props Panel */}
               <PropsPanel />
 
