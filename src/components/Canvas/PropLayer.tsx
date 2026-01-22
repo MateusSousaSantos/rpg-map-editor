@@ -49,6 +49,8 @@ export const PropLayer = ({ layer }: PropLayerProps) => {
     transformer.nodes(selectedNodes);
     transformer.getLayer()?.batchDraw();
   }, [selectedPropIds, sortedProps]);
+
+  if (!layer.visible) return null;
   
   return (
     <>

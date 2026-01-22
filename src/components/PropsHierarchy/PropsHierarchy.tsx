@@ -30,7 +30,7 @@ interface PropItemProps {
   prop: PropInstance;
   layerId: string;
   isSelected: boolean;
-  onSelect: (propId: string) => void;
+  onSelect: (propId: string, isMultiSelect: boolean) => void;
   onDelete?: (propId: string) => void;
 }
 
@@ -56,16 +56,21 @@ const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemPro
   const definition = propDefinitions.find(def => def.id === prop.definitionId);
   const displayName = prop.name || definition?.name || 'Unnamed Prop';
 
+  const handleClick = (e: React.MouseEvent) => {
+    const isMultiSelect = e.ctrlKey || e.metaKey || e.shiftKey;
+    onSelect(prop.id, isMultiSelect);
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 px-2 py-1.5 rounded border transition-all ${
+      className={`group flex items-center gap-2 px-2 py-1.5 rounded border transition-all cursor-pointer ${
         isSelected
           ? 'bg-blue-600/20 border-blue-500/50'
           : 'bg-slate-800/30 border-slate-700/50 hover:border-slate-600'
       }`}
-      onClick={() => onSelect(prop.id)}
+      onClick={handleClick}
     >
       {/* Drag Handle */}
       <div
@@ -198,7 +203,7 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
                   prop={prop}
                   layerId={layer.id}
                   isSelected={selectedPropIds.has(prop.id)}
-                  onSelect={(propId) => handlePropSelect(propId, false)}
+                  onSelect={handlePropSelect}
                   onDelete={(propId) => removeProp(layer.id, propId)}
                 />
               ))}
