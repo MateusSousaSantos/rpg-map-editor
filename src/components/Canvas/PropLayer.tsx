@@ -159,24 +159,27 @@ const PropGroup = ({ prop, layerId, layerOpacity, onMount, onUnmount }: PropGrou
   const handleTransformEnd = () => {
     const node = groupRef.current;
     if (!node) return;
-    
+
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
     const rotation = node.rotation();
-    
-    // Reset the scale on the node (we'll store it in the prop data)
+
     node.scaleX(1);
     node.scaleY(1);
-    
+
+    // Use the original dimensions to calculate the new width and height
+    const newWidth = prop.width * scaleX;
+    const newHeight = prop.height * scaleY;
+
     // Update the prop with new dimensions and transform
     updateProp(layerId, prop.id, {
       x: node.x(),
       y: node.y(),
-      width: prop.width * scaleX,
-      height: prop.height * scaleY,
+      width: newWidth, // Keep consistent width
+      height: newHeight, // Keep consistent height
       rotation: rotation,
-      scaleX: prop.scaleX * scaleX,
-      scaleY: prop.scaleY * scaleY,
+      scaleX: scaleX, // Store the new scale directly
+      scaleY: scaleY, // Store the new scale directly
     });
   };
   
