@@ -2,7 +2,7 @@
 // TILE SYSTEM
 // ============================================================================
 
-export type TileType = 'terrain' | 'wall' | 'overlay';
+export type TileType = 'terrain' | 'wall' | 'overlay' | 'overflow';
 
 /**
  * Base tile definition - defines what a tile IS
@@ -14,6 +14,11 @@ export interface BaseTileDefinition {
   type: TileType;
   textureUrl: string;      // path to sprite
   tileSize: number;        // 16, 32, 64, etc. - can change globally
+  
+  // Overflow tiles by direction - auto-placed when this tile is placed
+  // Maps direction to overflow tile definition ID
+  // E.g., { 'top': 'roof-top', 'left': 'wall-left' }
+  overflowTilesByDirection?: Record<Direction, string>;
   
   // For future autotiling system
   autotileGroup?: string;  // e.g., "grass", "stone_wall"
@@ -52,6 +57,12 @@ export interface OverlayTileDefinition extends BaseTileDefinition {
   blendMode?: 'normal' | 'multiply' | 'screen' | 'overlay';
 }
 
+export interface OverflowTileDefinition extends BaseTileDefinition {
+  type: 'overflow';
+  position: Direction;    // which side it overflows from
+  zIndex: number;        // rendering order
+}
+
 /**
  * Instance of a tile placed on the map
  * References a tile definition + stores instance-specific data
@@ -73,6 +84,7 @@ export interface TileInstance {
   type: TileType;
   // Metadata
   properties?: Record<string, any>;  // custom game data
+  overflowTiles?: TileInstance[]; // for overflow tiles associated with this tile
 }
 
 // ============================================================================

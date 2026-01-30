@@ -163,11 +163,11 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         const existingTile = getTileAt(layer.id, x, y, selectedTileGridType as TileType);
         
         // Skip if same tile already exists
-        if (existingTile && 
-            existingTile.definitionId === selectedTileDefinitionId &&
-            existingTile.type === selectedTileGridType) {
-          continue;
-        }
+        // if (existingTile && 
+        //     existingTile.definitionId === selectedTileDefinitionId &&
+        //     existingTile.type === selectedTileGridType) {
+        //   continue;
+        // }
         
         // Mark existing tile for removal
         if (existingTile) {

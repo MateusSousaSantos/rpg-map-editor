@@ -229,6 +229,23 @@ const TileRenderer = ({ tile, tileSize, map, isSelected, layerOpacity }: TileRen
         />
       )}
       
+      {/* Overflow Tiles - rendered on top of parent tile */}
+      {tile.overflowTiles && tile.overflowTiles.length > 0 && (
+        <>
+          {tile.overflowTiles.map((overflowTile, index) => (
+            <OverflowTileRenderer
+              key={overflowTile.id}
+              tile={overflowTile}
+              tileSize={tileSize}
+              map={map}
+              layerOpacity={layerOpacity}
+              stackIndex={index}
+              isSelected={selectedTileIds.has(overflowTile.id)}
+            />
+          ))}
+        </>
+      )}
+      
       {/* Selection Border */}
       {isSelected && (
         <Rect
@@ -237,6 +254,145 @@ const TileRenderer = ({ tile, tileSize, map, isSelected, layerOpacity }: TileRen
           width={width}
           height={height}
           stroke="#00ffff"
+          strokeWidth={2}
+          listening={false}
+          hitStrokeWidth={0}
+        />
+      )}
+    </>
+  );
+};
+
+/**
+ * OverflowTileRenderer - Renders overflow tiles stacked on top of parent tile
+ * Overflow tiles share the same grid position as parent, only zIndex differs
+ */
+interface OverflowTileRendererProps {
+  tile: TileInstance;
+  tileSize: number;
+  map: MapDocument;
+  layerOpacity: number;
+  stackIndex: number;  // index in parent's overflowTiles array (0 = first/bottom)
+  isSelected: boolean;
+}
+
+const OverflowTileRenderer = ({ 
+  tile, 
+  tileSize, 
+  map, 
+  layerOpacity, 
+  stackIndex, 
+  isSelected 
+}: OverflowTileRendererProps) => {
+  const loadTexture = useTextureCache((state) => state.loadTexture);
+  const getTexture = useTextureCache((state) => state.getTexture);
+  const [imageError, setImageError] = useState(false);
+  const loadingRef = useRef(false);
+  
+  // Find tile definition
+  const definition = map.tileDefinitions.find(
+    (def: BaseTileDefinition | OverlayTileDefinition) => def.id === tile.definitionId
+  ) as BaseTileDefinition | OverlayTileDefinition | undefined;
+  
+  if (!definition) {
+    console.warn(`Tile definition not found: ${tile.definitionId}`);
+    return null;
+  }
+  
+  // Use cached texture or load it
+  const [cachedImage, setCachedImage] = useState<HTMLImageElement | undefined>(() => 
+    getTexture(definition.textureUrl)
+  );
+  
+  useEffect(() => {
+    const texture = getTexture(definition.textureUrl);
+    if (texture) {
+      setCachedImage(texture);
+      return;
+    }
+    
+    // Load texture if not cached
+    if (!loadingRef.current) {
+      loadingRef.current = true;
+      loadTexture(definition.textureUrl)
+        .then((img) => {
+          setCachedImage(img);
+          setImageError(false);
+          loadingRef.current = false;
+        })
+        .catch(() => {
+          setImageError(true);
+          loadingRef.current = false;
+          console.error(`Failed to load overflow tile texture: ${definition.textureUrl}`);
+        });
+    }
+  }, [definition.textureUrl, loadTexture, getTexture]);
+  
+  // Calculate world position from grid position
+  const x = Math.round(tile.gridX * tileSize);
+  const y = Math.round(tile.gridY * tileSize);
+  const width = Math.round(tileSize);
+  const height = Math.round(tileSize);
+  
+  // Get opacity (instance override or definition default, then multiply by layer opacity)
+  const tileOpacity = tile.opacity ?? 
+    (definition.type === 'overlay' ? (definition as OverlayTileDefinition).opacity ?? 1 : 1);
+  const opacity = tileOpacity * layerOpacity;
+  
+  // Get rotation
+  const rotation = tile.rotation ?? 0;
+  
+  // Rotation offset
+  const offsetX = rotation !== 0 ? width / 2 : -0.5;
+  const offsetY = rotation !== 0 ? height / 2 : -0.5;
+  
+  return (
+    <>
+      {/* Overflow Tile Image */}
+      {cachedImage && !imageError ? (
+        <KonvaImage
+          image={cachedImage}
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          opacity={opacity}
+          rotation={rotation}
+          offsetX={offsetX}
+          offsetY={offsetY}
+          scaleX={1.01}
+          scaleY={1.01}
+          perfectDrawEnabled={false}
+          imageSmoothingEnabled={false}
+          listening={false}
+          shadowForStrokeEnabled={false}
+          hitStrokeWidth={0}
+          // Color tint (if specified)
+          filters={tile.tint ? [Konva.Filters.RGB] : undefined}
+          red={tile.tint ? parseInt(tile.tint.slice(1, 3), 16) : undefined}
+          green={tile.tint ? parseInt(tile.tint.slice(3, 5), 16) : undefined}
+          blue={tile.tint ? parseInt(tile.tint.slice(5, 7), 16) : undefined}
+        />
+      ) : (
+        // Fallback for missing/loading images
+        <Rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          fill={imageError ? '#ff0000' : '#333333'}
+          opacity={0.3}
+        />
+      )}
+      
+      {/* Selection Border for Overflow Tile */}
+      {isSelected && (
+        <Rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          stroke="#ff00ff"
           strokeWidth={2}
           listening={false}
           hitStrokeWidth={0}
