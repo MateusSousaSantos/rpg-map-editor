@@ -91,6 +91,13 @@ export const TILE_DEFINITIONS: Record<string, BaseTileDefinition> = {
     textureUrl: '/tilesets/terrain/water/water-bottomRight.png',
     tileSize: 16,
   },
+  'sand-terrain': {
+    id: 'sand-terrain',
+    name: 'Sand',
+    type: 'terrain',
+    textureUrl: '/tilesets/terrain/sand/center.png',
+    tileSize: 16,
+  }
   
   // Example: Tile with overflow tiles at adjacent coordinates
   // 'house-with-roof': {
