@@ -240,7 +240,7 @@ const TileRenderer = ({ tile, tileSize, map, isSelected, layerOpacity }: TileRen
               map={map}
               layerOpacity={layerOpacity}
               stackIndex={index}
-              isSelected={selectedTileIds.has(overflowTile.id)}
+              isSelected={false}
             />
           ))}
         </>
@@ -281,7 +281,6 @@ const OverflowTileRenderer = ({
   tileSize, 
   map, 
   layerOpacity, 
-  stackIndex, 
   isSelected 
 }: OverflowTileRendererProps) => {
   const loadTexture = useTextureCache((state) => state.loadTexture);

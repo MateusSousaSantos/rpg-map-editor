@@ -39,7 +39,6 @@ interface TileCategoryProps {
   selectedTileId: string | null;
   onSelectTile: (tileId: string, gridType: TileType) => void;
   onDeleteTile: (tileId: string) => void;
-  onAddTile: (type: TileType) => void;
 }
 
 const TileCategory = ({
@@ -96,7 +95,7 @@ const TileCategory = ({
 
 export const TilesPanel = () => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const { map, addTileDefinition, removeTileDefinition } = useMapStore();
+  const { map, removeTileDefinition } = useMapStore();
   const {
     selectedTileDefinitionId,
     selectedTileGridType,
@@ -130,37 +129,6 @@ export const TilesPanel = () => {
     }
   };
 
-  const handleAddTile = (type: TileType) => {
-    // For now, we'll add sample tiles from the public folder
-    // In a real app, you'd open a file picker or asset browser
-    const sampleTiles: Record<TileType, { url: string; name: string }> = {
-      terrain: {
-        url: "/tilesets/terrain/grass/grass-1.png",
-        name: "Grass Tile",
-      },
-      overlay: {
-        url: "/tilesets/overlay/wood/wood-1.png",
-        name: "Wood Overlay",
-      },
-      wall: {
-        url: "/tilesets/terrain/grass/grass-1.png",
-        name: "Wall Tile",
-      },
-    };
-
-    const sample = sampleTiles[type];
-    const newTile: BaseTileDefinition = {
-      id: crypto.randomUUID(),
-      name: `${sample.name} ${
-        map.tileDefinitions.filter((t) => t.type === type).length + 1
-      }`,
-      type: type,
-      textureUrl: sample.url,
-      tileSize: map.tileSize,
-    };
-
-    addTileDefinition(newTile);
-  };
 
   const currentSelectedTileId = selectedTileGridType
     ? selectedTileDefinitionId
@@ -197,7 +165,6 @@ export const TilesPanel = () => {
           selectedTileId={currentSelectedTileId}
           onSelectTile={handleSelectTile}
           onDeleteTile={handleDeleteTile}
-          onAddTile={handleAddTile}
         />
 
         <TileCategory
@@ -207,7 +174,6 @@ export const TilesPanel = () => {
           selectedTileId={currentSelectedTileId}
           onSelectTile={handleSelectTile}
           onDeleteTile={handleDeleteTile}
-          onAddTile={handleAddTile}
         />
 
         <TileCategory
@@ -217,7 +183,6 @@ export const TilesPanel = () => {
           selectedTileId={currentSelectedTileId}
           onSelectTile={handleSelectTile}
           onDeleteTile={handleDeleteTile}
-          onAddTile={handleAddTile}
         />
       </div>
 

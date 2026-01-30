@@ -3,13 +3,14 @@
 // ============================================================================
 
 import { create } from 'zustand';
+import type { TileType } from '../types/map';
 export type ToolType = 'brush' | 'eraser' | 'fill' | 'place-prop' | 'select' | 'pan' | 'box';
 
 interface ToolState {
   activeTool: ToolType;
   // Brush/Fill tool
   selectedTileDefinitionId: string | null;
-  selectedTileGridType: 'terrain' | 'wall' | 'overlay' | null;
+  selectedTileGridType: TileType | null;
   
   // Place prop tool
   selectedPropDefinitionId: string | null;
@@ -19,7 +20,7 @@ interface ToolState {
   
   // Actions
   setActiveTool: (tool: ToolType) => void;
-  setSelectedTileDefinition: (defId: string, gridType: 'terrain' | 'wall' | 'overlay') => void;
+  setSelectedTileDefinition: (defId: string, gridType: TileType) => void;
   setSelectedPropDefinition: (defId: string) => void;
   setBrushSize: (size: number) => void;
   clearToolSelection: () => void;
