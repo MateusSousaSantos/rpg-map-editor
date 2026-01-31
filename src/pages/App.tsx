@@ -6,6 +6,7 @@ import { useMapStore } from "../stores/mapStore";
 import { useToolStore } from "../stores/toolStore";
 import { useUISelectionStore } from "../stores/uiSelectionStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { SpeedInsights } from "@vercel/speed-insights/react"
 import {
   FiEdit2,
   FiTrash2,
@@ -126,7 +127,7 @@ function App() {
         {/* Map Canvas */}
         <MapCanvas editable={true} />
       </main>
-
+      <SpeedInsights />
       {/* Sidebar */}
       <Sidebar />
     </div>
