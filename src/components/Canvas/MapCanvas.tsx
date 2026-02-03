@@ -317,28 +317,29 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
         onMouseUp={canvasEvents.handleMouseUp}
         onMouseLeave={handleStageMouseLeave}
       >
-        {/* Single Layer for all tiles and props - Render in depth order (tiles and props interleaved by layer) */}
-        <Layer imageSmoothingEnabled={false}>
-          {map.layers
-            .slice()
-            .sort((a, b) => a.depthIndex - b.depthIndex)
-            .flatMap((layer) =>
-              [
-                /* Render tiles for this layer */
-                layer.type === "tile" && (
-                  <TileLayer
-                    key={layer.id}
-                    layer={layer}
-                    tileSize={map.tileSize}
-                    canvasWidth={dimensions.width}
-                    canvasHeight={dimensions.height}
-                  />
-                ),
-                /* Render props for this layer */
-                <PropLayer key={`props-${layer.id}`} layer={layer} />,
-              ].filter(Boolean),
-            )}
-        </Layer>
+        {/* Render each layer with its tiles and props grouped together, sorted by depthIndex */}
+        {map.layers
+          .slice()
+          .sort((a, b) => a.depthIndex - b.depthIndex)
+          .map((layer) => (
+            <Layer
+              key={layer.id}
+              imageSmoothingEnabled={false}
+              opacity={layer.opacity}
+              visible={layer.visible}
+            >
+              {/* Render tiles for this layer using native canvas */}
+              <TileLayer
+                layer={layer}
+                tileSize={map.tileSize}
+                canvasWidth={dimensions.width}
+                canvasHeight={dimensions.height}
+              />
+              
+              {/* Render props for this layer (Konva elements for interactivity) */}
+              <PropLayer layer={layer} />
+            </Layer>
+          ))}
 
         {/* Cursor Preview Layer - Shows what will be placed */}
         {editable && (
