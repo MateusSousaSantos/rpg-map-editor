@@ -2,6 +2,7 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import type { MapLayer, TileInstance, BaseTileDefinition, OverlayTileDefinition } from '../types/map';
 import { useTextureCache } from '../stores/textureCache';
 import { useViewportStore } from '../stores/viewportStore';
+import { isAutotileEnabled, computeBlobBitmask, resolveAutotileTexturePath } from '../utils/autotiling';
 
 interface UseNativeCanvasTilesProps {
   layer: MapLayer;
@@ -89,7 +90,31 @@ export const useNativeCanvasTiles = ({
     }
     return tiles;
   }, [layer.tilesById, visibleBounds]);
-  
+
+  // Resolve the effective texture URL for each visible tile.
+  // Autotile-enabled tiles get a per-bitmask variant path; others use textureUrl as-is.
+  const resolvedTextureUrls = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const tile of visibleTiles) {
+      const def = tileDefinitions.get(tile.definitionId);
+      if (!def) continue;
+      if (isAutotileEnabled(def)) {
+        const bitmask = computeBlobBitmask(
+          tile.gridX,
+          tile.gridY,
+          layer.tiles,
+          def.autotileGroup!,
+          tile.type,
+          tileDefinitions as Map<string, BaseTileDefinition>,
+        );
+        map.set(tile.id, resolveAutotileTexturePath(def, bitmask));
+      } else {
+        map.set(tile.id, def.textureUrl);
+      }
+    }
+    return map;
+  }, [visibleTiles, layer.tiles, tileDefinitions]);
+
   // Initialize canvas
   useEffect(() => {
     if (!canvasRef.current) {
@@ -159,15 +184,25 @@ export const useNativeCanvasTiles = ({
   // Load textures for visible tiles and trigger redraw when loaded
   useEffect(() => {
     const texturesToLoad: string[] = [];
+
+    const enqueue = (url: string) => {
+      if (!getTexture(url) && !loadingTexturesRef.current.has(url)) {
+        texturesToLoad.push(url);
+        loadingTexturesRef.current.add(url);
+      }
+    };
     
     for (const tile of visibleTiles) {
       const definition = tileDefinitions.get(tile.definitionId);
       if (!definition) continue;
-      
-      const texture = getTexture(definition.textureUrl);
-      if (!texture && !loadingTexturesRef.current.has(definition.textureUrl)) {
-        texturesToLoad.push(definition.textureUrl);
-        loadingTexturesRef.current.add(definition.textureUrl);
+
+      // Always ensure the base texture is loaded as a fallback
+      enqueue(definition.textureUrl);
+
+      // For autotile tiles, also load the resolved variant URL
+      const resolvedUrl = resolvedTextureUrls.get(tile.id);
+      if (resolvedUrl && resolvedUrl !== definition.textureUrl) {
+        enqueue(resolvedUrl);
       }
       
       // Also check overflow tiles
@@ -175,12 +210,7 @@ export const useNativeCanvasTiles = ({
         for (const overflowTile of tile.overflowTiles) {
           const overflowDef = tileDefinitions.get(overflowTile.definitionId);
           if (!overflowDef) continue;
-          
-          const overflowTexture = getTexture(overflowDef.textureUrl);
-          if (!overflowTexture && !loadingTexturesRef.current.has(overflowDef.textureUrl)) {
-            texturesToLoad.push(overflowDef.textureUrl);
-            loadingTexturesRef.current.add(overflowDef.textureUrl);
-          }
+          enqueue(overflowDef.textureUrl);
         }
       }
     }
@@ -190,19 +220,16 @@ export const useNativeCanvasTiles = ({
       Promise.all(texturesToLoad.map(url => 
         loadTexture(url)
           .then(() => {
-            // Texture loaded successfully, remove from loading set
             loadingTexturesRef.current.delete(url);
           })
           .catch(() => {
-            // Texture failed to load, remove from loading set
             loadingTexturesRef.current.delete(url);
           })
       )).then(() => {
-        // Trigger redraw when textures are loaded
         setRedrawTrigger(prev => prev + 1);
       });
     }
-  }, [visibleTiles, tileDefinitions, getTexture, loadTexture]);
+  }, [visibleTiles, resolvedTextureUrls, tileDefinitions, getTexture, loadTexture]);
   
   // Draw tiles to canvas
   useEffect(() => {
@@ -222,8 +249,10 @@ export const useNativeCanvasTiles = ({
     for (const tile of visibleTiles) {
       const definition = tileDefinitions.get(tile.definitionId);
       if (!definition) continue;
-      
-      const texture = getTexture(definition.textureUrl);
+
+      // Prefer the autotile variant; fall back to base texture when file is missing
+      const resolvedUrl = resolvedTextureUrls.get(tile.id) ?? definition.textureUrl;
+      const texture = getTexture(resolvedUrl) ?? getTexture(definition.textureUrl);
       if (!texture || !texture.complete) continue;
       
       // Calculate position relative to canvas
@@ -304,7 +333,7 @@ export const useNativeCanvasTiles = ({
         }
       }
     }
-  }, [redrawTrigger, visibleTiles, visibleBounds, tileSize, layerOpacity, tileDefinitions, getTexture]);
+  }, [redrawTrigger, visibleTiles, resolvedTextureUrls, visibleBounds, tileSize, layerOpacity, tileDefinitions, getTexture]);
   
   // Return canvas and position information
   return {

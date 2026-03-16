@@ -10,6 +10,8 @@ export const TILE_DEFINITIONS: Record<string, BaseTileDefinition> = {
     type: 'terrain',
     textureUrl: '/tilesets/terrain/grass/grass-1.png',
     tileSize: 16,
+    autotileGroup: 'grass',
+    autotileBasePath: '/tilesets/terrain/grass/autotile/',
   },
   'wood-terrain': {
     id: 'wood-terrain',
@@ -17,6 +19,8 @@ export const TILE_DEFINITIONS: Record<string, BaseTileDefinition> = {
     type: 'terrain',
     textureUrl: '/tilesets/terrain/wood/wood-1.png',
     tileSize: 16,
+    autotileGroup: 'wood',
+    autotileBasePath: '/tilesets/terrain/wood/autotile/',
   },
   'water-terrain': {
     id: 'water-terrain',
@@ -97,28 +101,19 @@ export const TILE_DEFINITIONS: Record<string, BaseTileDefinition> = {
     type: 'terrain',
     textureUrl: '/tilesets/terrain/sand/center.png',
     tileSize: 16,
+    autotileGroup: 'sand',
+    autotileBasePath: '/tilesets/terrain/sand/autotile/',
+  },
+  'wood-wall': {
+    id: 'wood-wall',
+    name: 'Wood Wall',
+    type: 'wall',
+    textureUrl: '/tilesets/walls/wood/center.png',
+    tileSize: 16,
+    autotileGroup: 'wood_wall',
+    autotileBasePath: '/tilesets/walls/wood/autotile/',
   }
   
-  // Example: Tile with overflow tiles at adjacent coordinates
-  // 'house-with-roof': {
-  //   id: 'house-with-roof',
-  //   name: 'House',
-  //   type: 'terrain',
-  //   textureUrl: '/tilesets/terrain/house-base.png',
-  //   tileSize: 16,
-  //   overflowTilesByDirection: {
-  //     'top': 'roof-top',
-  //     'topLeft': 'roof-corner-tl',
-  //     'topRight': 'roof-corner-tr',
-  //   }
-  // },
-  // 'roof-top': {
-  //   id: 'roof-top',
-  //   name: 'Roof (Top)',
-  //   type: 'overflow',
-  //   textureUrl: '/tilesets/terrain/roof-top.png',
-  //   tileSize: 16,
-  // },
 };
 
 export const PROP_DEFINITIONS: Record<string, PropDefinition> = {

@@ -20,8 +20,9 @@ export interface BaseTileDefinition {
   // E.g., { 'top': 'roof-top', 'left': 'wall-left' }
   overflowTilesByDirection?: Record<Direction, string>;
   
-  // For future autotiling system
-  autotileGroup?: string;  // e.g., "grass", "stone_wall"
+  // Autotiling system
+  autotileGroup?: string;      // e.g., "grass", "stone_wall" — tiles with the same group connect
+  autotileBasePath?: string;   // e.g., "/tilesets/terrain/grass/autotile/" — variant files named {bitmask}.png
   autotileRules?: AutotileRule[];
 }
 

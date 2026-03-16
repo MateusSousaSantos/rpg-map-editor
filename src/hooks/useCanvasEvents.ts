@@ -97,6 +97,12 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     if (existingTile) {
       removeTile(layer.id, existingTile.id);
     }
+
+    // Also remove any overflow tile occupying this cell (placed by a neighboring parent tile)
+    const existingOverflow = getTileAt(layer.id, gridX, gridY, 'overflow');
+    if (existingOverflow) {
+      removeTile(layer.id, existingOverflow.id);
+    }
     
     // Create new tile
     const newTile: TileInstance = {
@@ -123,8 +129,8 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       : map.layers[0];
     if (!layer || layer.locked) return;
     
-    // Find and remove ALL tiles at this position (terrain, overlay, wall)
-    const tileTypes: TileType[] = ['terrain', 'overlay', 'wall'];
+    // Find and remove ALL tiles at this position (terrain, overlay, wall, overflow)
+    const tileTypes: TileType[] = ['terrain', 'overlay', 'wall', 'overflow'];
     tileTypes.forEach((type) => {
       const tile = getTileAt(layer.id, gridX, gridY, type);
       if (tile) {
@@ -172,6 +178,12 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         // Mark existing tile for removal
         if (existingTile) {
           tileIdsToRemove.push(existingTile.id);
+        }
+
+        // Also remove any overflow tile occupying this cell
+        const existingOverflow = getTileAt(layer.id, x, y, 'overflow');
+        if (existingOverflow) {
+          tileIdsToRemove.push(existingOverflow.id);
         }
         
         // Create new tile
