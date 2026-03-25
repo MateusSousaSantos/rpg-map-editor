@@ -1,7 +1,11 @@
 import { useToolStore } from "../../stores/toolStore";
-import { FiEdit2, FiTrash2, FiSquare } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiSquare, FiDownload } from "react-icons/fi";
 
-export const Toolbar = () => {
+interface ToolbarProps {
+  onExportClick: () => void;
+}
+
+export const Toolbar = ({ onExportClick }: ToolbarProps) => {
   const { activeTool, setActiveTool } = useToolStore();
 
   return (
@@ -46,6 +50,19 @@ export const Toolbar = () => {
       >
         <FiSquare size={16} />
         <span className="text-xs font-medium">Box</span>
+      </button>
+
+      {/* Divider */}
+      <div className="w-px h-5 bg-slate-700 mx-1" />
+
+      {/* Export */}
+      <button
+        onClick={onExportClick}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors text-emerald-400 hover:text-emerald-300 hover:bg-slate-800"
+        title="Export Map"
+      >
+        <FiDownload size={16} />
+        <span className="text-xs font-medium">Export</span>
       </button>
     </div>
   );

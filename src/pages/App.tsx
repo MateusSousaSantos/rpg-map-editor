@@ -1,8 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MapCanvas } from "../components/Canvas/MapCanvas";
 import { Sidebar } from "../components/Sidebar";
 import { PropsHierarchy } from "../components/PropsHierarchy";
 import { Toolbar } from "../components/Toolbar/Toolbar";
+import { ExportModal } from "../components/ExportModal/ExportModal";
 import { useMapStore } from "../stores/mapStore";
 import { useUISelectionStore } from "../stores/uiSelectionStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -12,6 +13,7 @@ import { Link } from "react-router-dom";
 function App() {
   const { map } = useMapStore();
   const { selectLayer, selectedLayerId } = useUISelectionStore();
+  const [exportOpen, setExportOpen] = useState(false);
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
@@ -40,9 +42,10 @@ function App() {
         {/* Map Canvas */}
         <MapCanvas editable={true} />
         {/* Floating Toolbar */}
-        <Toolbar />
+        <Toolbar onExportClick={() => setExportOpen(true)} />
       </main>
       <SpeedInsights />
+      <ExportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} />
       {/* Sidebar */}
       <Sidebar />
     </div>
