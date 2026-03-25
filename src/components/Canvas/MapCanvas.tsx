@@ -405,12 +405,6 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
           {map.width} × {map.height} tiles ({map.tileSize}px)
         </div>
       </div>
-
-      {/* Pan Instructions */}
-      <div className="absolute bottom-4 right-4 bg-slate-800 rounded-lg shadow-lg px-3 py-2 text-xs text-gray-400">
-        <div>🖱️ Shift + Drag to pan</div>
-        <div>🖱️ Scroll to zoom</div>
-      </div>
     </div>
   );
 };

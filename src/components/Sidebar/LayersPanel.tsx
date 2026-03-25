@@ -18,7 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useMapStore } from "../../stores/mapStore";
 import { useUISelectionStore } from "../../stores/uiSelectionStore";
-import { FiEye, FiEyeOff, FiLock, FiUnlock } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLock, FiUnlock, FiGrid } from "react-icons/fi";
 import {
   FaPlus,
   FaMinus,
@@ -158,7 +158,7 @@ export const LayersPanel = () => {
   const [isExpanded, setIsExpanded] = useState(true);
   const { map, addLayer, removeLayer, updateLayer, reorderLayers } =
     useMapStore();
-  const { selectedLayerId, selectLayer } = useUISelectionStore();
+  const { selectedLayerId, selectLayer, showGrid, toggleGrid } = useUISelectionStore();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -242,12 +242,28 @@ export const LayersPanel = () => {
           <button className="flex items-center gap-2 hover:text-slate-100 transition-colors">
             <h2 className="text-lg text-slate-200">Layers</h2>
           </button>
-          <FaChevronDown
-            size={14}
-            className={`text-slate-400 transition-transform ${
-              isExpanded ? "rotate-0" : "-rotate-180"
-            }`}
-          />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleGrid();
+              }}
+              className={`p-1.5 rounded transition-colors ${
+                showGrid
+                  ? "bg-blue-500/20 text-blue-300"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+              }`}
+              title={showGrid ? "Hide grid" : "Show grid"}
+            >
+              <FiGrid size={16} />
+            </button>
+            <FaChevronDown
+              size={14}
+              className={`text-slate-400 transition-transform ${
+                isExpanded ? "rotate-0" : "-rotate-180"
+              }`}
+            />
+          </div>
         </div>
         {/* Layer Controls */}
       </div>
