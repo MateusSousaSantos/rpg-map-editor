@@ -9,8 +9,9 @@
  */
 
 import { Group, Image, Transformer } from 'react-konva';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, memo } from 'react';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
+import { useTextureCache } from '../../stores/textureCache';
 import type { MapLayer, PropInstance } from '../../types/map';
 import { useMapStore } from '../../stores/mapStore';
 import Konva from 'konva';
@@ -19,7 +20,7 @@ interface PropLayerProps {
   layer: MapLayer;
 }
 
-export const PropLayer = ({ layer }: PropLayerProps) => {
+export const PropLayer = memo(({ layer }: PropLayerProps) => {
   // Sort props by global depth: (layer.depthIndex * 10000) + prop.zIndex
   // This ensures props in lower layers always appear beneath props in higher layers
   const sortedProps = [...layer.props].sort((a, b) => {
@@ -82,7 +83,7 @@ export const PropLayer = ({ layer }: PropLayerProps) => {
       />
     </>
   );
-};
+});
 
 /**
  * PropGroup - Renders a single prop with selection border
@@ -95,12 +96,13 @@ interface PropGroupProps {
   onUnmount: () => void;
 }
 
-const PropGroup = ({ prop, layerId, layerOpacity, onMount, onUnmount }: PropGroupProps) => {
+const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: PropGroupProps) => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const { selectProps, togglePropSelection } = useUISelectionStore();
   const selectedPropIds = useUISelectionStore((state) => state.selectedPropIds);
   const propDefinitions = useMapStore((state) => state.map?.propDefinitions || []);
   const updateProp = useMapStore((state) => state.updateProp);
+  const { getTexture, loadTexture } = useTextureCache();
   const groupRef = useRef<Konva.Group>(null);
   
   // Get prop definition
@@ -116,25 +118,23 @@ const PropGroup = ({ prop, layerId, layerOpacity, onMount, onUnmount }: PropGrou
     };
   }, [onMount, onUnmount]);
   
-  // Load image
+  // Load image via shared texture cache (deduplicates loads across props)
   useEffect(() => {
     if (!definition) return;
-    
-    const img = new window.Image();
-    img.crossOrigin = 'anonymous'; // Enable CORS if needed
-    img.src = definition.textureUrl;
-    img.onload = () => {
-      setImage(img);
-    };
-    img.onerror = () => {
-      console.error(`Failed to load prop image: ${definition.textureUrl}`);
-    };
-    
-    return () => {
-      img.onload = null;
-      img.onerror = null;
-    };
-  }, [definition]);
+
+    const url = definition.textureUrl;
+    const cached = getTexture(url);
+    if (cached) {
+      setImage(cached);
+      return;
+    }
+
+    loadTexture(url)
+      .then((img) => setImage(img))
+      .catch(() => {
+        console.error(`Failed to load prop image: ${url}`);
+      });
+  }, [definition, getTexture, loadTexture]);
   
   // Handle click on prop
   const handleClick = (e: any) => {
@@ -226,4 +226,4 @@ const PropGroup = ({ prop, layerId, layerOpacity, onMount, onUnmount }: PropGrou
       />
     </Group>
   );
-};
+});

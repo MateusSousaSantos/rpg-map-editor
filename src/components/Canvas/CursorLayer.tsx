@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Layer, Image as KonvaImage, Rect } from 'react-konva';
 import useImage from 'use-image';
 import { useToolStore } from '../../stores/toolStore';
@@ -15,7 +16,7 @@ interface CursorLayerProps {
  * CursorLayer - Shows preview of the tile that will be placed
  * Displays a semi-transparent preview of the selected tile at cursor position
  */
-export const CursorLayer = ({ tileSize, cursorGridX, cursorGridY, boxPreview }: CursorLayerProps) => {
+export const CursorLayer = memo(({ tileSize, cursorGridX, cursorGridY, boxPreview }: CursorLayerProps) => {
   const { activeTool, selectedTileDefinitionId } = useToolStore();
   const map = useMapStore((state) => state.map);
   
@@ -122,4 +123,4 @@ export const CursorLayer = ({ tileSize, cursorGridX, cursorGridY, boxPreview }: 
       )}
     </Layer>
   );
-};
+});

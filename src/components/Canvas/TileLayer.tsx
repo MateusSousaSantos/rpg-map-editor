@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect, memo } from 'react';
 import { Image as KonvaImage, Rect } from 'react-konva';
+import Konva from 'konva';
 import type { MapLayer, BaseTileDefinition, OverlayTileDefinition } from '../../types/map';
 import { useMapStore } from '../../stores/mapStore';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
@@ -43,7 +44,7 @@ interface TileLayerProps {
  *    - Dirty-checking prevents unnecessary redraws
  *    - Example: Static map → 0 redraws while panning (canvas moves, not redraws)
  */
-export const TileLayer = ({ layer, tileSize, canvasWidth = 800, canvasHeight = 600 }: TileLayerProps) => {
+export const TileLayer = memo(({ layer, tileSize, canvasWidth = 800, canvasHeight = 600 }: TileLayerProps) => {
   const map = useMapStore((state) => state.map);
   const selectedTileIds = useUISelectionStore((state) => state.selectedTileIds);
   
@@ -61,7 +62,7 @@ export const TileLayer = ({ layer, tileSize, canvasWidth = 800, canvasHeight = 6
   }, [map?.tileDefinitions]);
   
   // Use native canvas renderer for tiles
-  const { canvas, x: canvasX, y: canvasY } = useNativeCanvasTiles({
+  const { canvas, x: canvasX, y: canvasY, drawVersion } = useNativeCanvasTiles({
     layer,
     tileSize,
     canvasWidth,
@@ -71,6 +72,14 @@ export const TileLayer = ({ layer, tileSize, canvasWidth = 800, canvasHeight = 6
     mapHeight: map?.height ?? 0,
     tileDefinitions: tileDefinitionsMap,
   });
+
+  // Force Konva to repaint when the off-screen canvas content changes.
+  // Konva Image compares the image prop by reference; since the canvas
+  // element is stable, we must explicitly trigger a layer redraw.
+  const imageRef = useRef<Konva.Image>(null);
+  useEffect(() => {
+    imageRef.current?.getLayer()?.batchDraw();
+  }, [drawVersion]);
   
   // Early returns AFTER all hooks have been called
   if (!map || !currentLayer) return null;
@@ -80,6 +89,7 @@ export const TileLayer = ({ layer, tileSize, canvasWidth = 800, canvasHeight = 6
       {/* Render the native canvas as a Konva.Image */}
       {canvas && (
         <KonvaImage
+          ref={imageRef}
           image={canvas}
           x={canvasX}
           y={canvasY}
@@ -106,4 +116,4 @@ export const TileLayer = ({ layer, tileSize, canvasWidth = 800, canvasHeight = 6
         ))}
     </>
   );
-};
+});

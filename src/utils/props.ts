@@ -69,22 +69,46 @@ export const validatePropInstance = (prop: PropInstance): boolean => {
 };
 
 /**
- * Check if a point is inside a prop
+ * Check if a point is inside a prop, accounting for rotation
  */
 export const isPointInProp = (
   prop: PropInstance,
   worldX: number,
   worldY: number
 ): boolean => {
-  // Simple bounding box check (no rotation considered yet)
   const width = prop.width * prop.scaleX;
   const height = prop.height * prop.scaleY;
-  
+
+  if (prop.rotation === 0) {
+    // Fast path: axis-aligned bounding box
+    return (
+      worldX >= prop.x &&
+      worldX <= prop.x + width &&
+      worldY >= prop.y &&
+      worldY <= prop.y + height
+    );
+  }
+
+  // Transform the test point into the prop's local coordinate space
+  // so we can do a simple AABB check in that space.
+  const cx = prop.x + width / 2;
+  const cy = prop.y + height / 2;
+
+  const rad = -(prop.rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+
+  const dx = worldX - cx;
+  const dy = worldY - cy;
+
+  const localX = dx * cos - dy * sin + width / 2;
+  const localY = dx * sin + dy * cos + height / 2;
+
   return (
-    worldX >= prop.x &&
-    worldX <= prop.x + width &&
-    worldY >= prop.y &&
-    worldY <= prop.y + height
+    localX >= 0 &&
+    localX <= width &&
+    localY >= 0 &&
+    localY <= height
   );
 };
 

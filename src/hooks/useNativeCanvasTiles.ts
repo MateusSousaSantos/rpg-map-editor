@@ -54,6 +54,8 @@ export const useNativeCanvasTiles = ({
   
   // Track if we need to redraw
   const [redrawTrigger, setRedrawTrigger] = useState(0);
+  // Incremented after each completed draw so consumers can force Konva repaint
+  const [drawVersion, setDrawVersion] = useState(0);
   const prevTilesRef = useRef<Map<string, TileInstance>>(new Map());
   const loadingTexturesRef = useRef<Set<string>>(new Set());
   
@@ -333,6 +335,9 @@ export const useNativeCanvasTiles = ({
         }
       }
     }
+
+    // Signal consumers that a new frame was drawn
+    setDrawVersion(prev => prev + 1);
   }, [redrawTrigger, visibleTiles, resolvedTextureUrls, visibleBounds, tileSize, layerOpacity, tileDefinitions, getTexture]);
   
   // Return canvas and position information
@@ -340,5 +345,6 @@ export const useNativeCanvasTiles = ({
     canvas: canvasRef.current,
     x: visibleBounds.minX * tileSize,
     y: visibleBounds.minY * tileSize,
+    drawVersion,
   };
 };

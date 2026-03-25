@@ -5,16 +5,11 @@ import { create } from 'zustand';
 // Note: Not using Immer because it doesn't work well with DOM elements
 // ============================================================================
 
-interface TextureState {
-  loading: boolean;
-  error: boolean;
-}
-
 interface TextureCacheState {
   // Cache of loaded images
   textures: Map<string, HTMLImageElement>;
-  // Loading states
-  states: Map<string, TextureState>;
+  // In-flight loading promises (deduplicates concurrent requests)
+  pending: Map<string, Promise<HTMLImageElement>>;
   
   // Actions
   loadTexture: (url: string) => Promise<HTMLImageElement>;
@@ -25,7 +20,7 @@ interface TextureCacheState {
 
 export const useTextureCache = create<TextureCacheState>((set, get) => ({
   textures: new Map(),
-  states: new Map(),
+  pending: new Map(),
   
   loadTexture: async (url: string) => {
     const state = get();
@@ -36,56 +31,43 @@ export const useTextureCache = create<TextureCacheState>((set, get) => ({
       return cached;
     }
     
-    // Check if already loading
-    const loadingState = state.states.get(url);
-    if (loadingState?.loading) {
-      // Wait for existing load to complete
-      return new Promise((resolve, reject) => {
-        const checkInterval = setInterval(() => {
-          const currentState = get();
-          const texture = currentState.textures.get(url);
-          const state = currentState.states.get(url);
-          
-          if (texture) {
-            clearInterval(checkInterval);
-            resolve(texture);
-          } else if (state?.error) {
-            clearInterval(checkInterval);
-            reject(new Error(`Failed to load texture: ${url}`));
-          }
-        }, 50);
-      });
+    // If already loading, return the existing promise (no polling needed)
+    const inflight = state.pending.get(url);
+    if (inflight) {
+      return inflight;
     }
     
-    // Mark as loading
-    const newStates = new Map(get().states);
-    newStates.set(url, { loading: true, error: false });
-    set({ states: newStates });
-    
-    // Load the image
-    return new Promise((resolve, reject) => {
+    // Create a new loading promise
+    const promise = new Promise<HTMLImageElement>((resolve, reject) => {
       const img = new Image();
       img.crossOrigin = 'anonymous';
       
       img.onload = () => {
         const newTextures = new Map(get().textures);
-        const newStates = new Map(get().states);
+        const newPending = new Map(get().pending);
         newTextures.set(url, img);
-        newStates.set(url, { loading: false, error: false });
-        set({ textures: newTextures, states: newStates });
+        newPending.delete(url);
+        set({ textures: newTextures, pending: newPending });
         resolve(img);
       };
       
       img.onerror = (error) => {
-        const newStates = new Map(get().states);
-        newStates.set(url, { loading: false, error: true });
-        set({ states: newStates });
+        const newPending = new Map(get().pending);
+        newPending.delete(url);
+        set({ pending: newPending });
         console.error(`Failed to load texture: ${url}`, error);
         reject(new Error(`Failed to load texture: ${url}`));
       };
       
       img.src = url;
     });
+    
+    // Store the pending promise so concurrent callers reuse it
+    const newPending = new Map(get().pending);
+    newPending.set(url, promise);
+    set({ pending: newPending });
+    
+    return promise;
   },
   
   getTexture: (url: string) => {
@@ -93,7 +75,7 @@ export const useTextureCache = create<TextureCacheState>((set, get) => ({
   },
   
   clearCache: () => {
-    set({ textures: new Map(), states: new Map() });
+    set({ textures: new Map(), pending: new Map() });
   },
   
   getCacheStats: () => {

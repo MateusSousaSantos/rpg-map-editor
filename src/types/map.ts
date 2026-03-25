@@ -311,4 +311,5 @@ export type MapAction =
   | { type: 'ADD_LAYER'; layer: MapLayer }
   | { type: 'REMOVE_LAYER'; layerId: string }
   | { type: 'UPDATE_LAYER'; layerId: string; changes: Partial<MapLayer> }
-  | { type: 'REORDER_LAYERS'; newOrder: string[] };
+  | { type: 'REORDER_LAYERS'; newOrder: string[] }
+  | { type: 'BATCH'; actions: MapAction[] };

@@ -10,8 +10,6 @@ export const TILE_DEFINITIONS: Record<string, BaseTileDefinition> = {
     type: 'terrain',
     textureUrl: '/tilesets/terrain/grass/grass-1.png',
     tileSize: 16,
-    autotileGroup: 'grass',
-    autotileBasePath: '/tilesets/terrain/grass/autotile/',
   },
   'wood-terrain': {
     id: 'wood-terrain',
@@ -19,8 +17,6 @@ export const TILE_DEFINITIONS: Record<string, BaseTileDefinition> = {
     type: 'terrain',
     textureUrl: '/tilesets/terrain/wood/wood-1.png',
     tileSize: 16,
-    autotileGroup: 'wood',
-    autotileBasePath: '/tilesets/terrain/wood/autotile/',
   },
   'water-terrain': {
     id: 'water-terrain',
@@ -101,8 +97,6 @@ export const TILE_DEFINITIONS: Record<string, BaseTileDefinition> = {
     type: 'terrain',
     textureUrl: '/tilesets/terrain/sand/center.png',
     tileSize: 16,
-    autotileGroup: 'sand',
-    autotileBasePath: '/tilesets/terrain/sand/autotile/',
   },
   'wood-wall': {
     id: 'wood-wall',
