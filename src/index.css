@@ -163,18 +163,47 @@ canvas {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #4b5563; /* gray-600 */
+  background: var(--color-edge-strong);
 }
 
 /* Dark theme scrollbar */
 .scrollbar-dark::-webkit-scrollbar-track {
-  background: #0f172a; /* slate-900 */
+  background: var(--color-panel);
 }
 
 .scrollbar-dark::-webkit-scrollbar-thumb {
-  background: #334155; /* slate-700 */
+  background: var(--color-edge);
 }
 
 .scrollbar-dark::-webkit-scrollbar-thumb:hover {
-  background: #475569; /* slate-600 */
+  background: var(--color-edge-strong);
+}
+
+/* ── Public pages ───────────────────────────────────────── */
+
+/* Hero dot grid background */
+.hero-grid-bg {
+  background-image: radial-gradient(
+    circle,
+    rgba(99, 102, 241, 0.14) 1px,
+    transparent 1px
+  );
+  background-size: 28px 28px;
+}
+
+/* Hero accent glow pulse */
+@keyframes hero-glow-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%       { opacity: 0.75; }
+}
+
+.hero-glow {
+  animation: hero-glow-pulse 4s ease-in-out infinite;
+}
+
+/* Allow text selection on landing / public pages */
+.selectable,
+.selectable * {
+  user-select: text;
+  -webkit-user-select: text;
 }

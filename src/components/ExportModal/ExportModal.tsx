@@ -94,7 +94,7 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
       {/* Card */}
       <div
         ref={modalRef}
-        className="relative w-96 rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl"
+        className="relative w-96 rounded-2xl border border-edge bg-panel p-6 shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-label="Export Map"
@@ -102,12 +102,12 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FiDownload className="text-emerald-400" size={18} />
-            <h2 className="text-base font-semibold text-slate-100">Export Map</h2>
+            <FiDownload className="text-ok" size={18} />
+            <h2 className="text-base font-semibold text-ink">Export Map</h2>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+            className="rounded-full p-1 text-ink-secondary transition-colors hover:bg-raised hover:text-ink"
             aria-label="Close"
           >
             <FiX size={16} />
@@ -116,7 +116,7 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
 
         {/* Format */}
         <div className="mb-4">
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-slate-500">
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-ink-muted">
             Format
           </p>
           <div className="flex gap-2">
@@ -126,8 +126,8 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
                 onClick={() => setFormat(f)}
                 className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   format === f
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-slate-100'
+                    ? 'bg-ok text-white'
+                    : 'bg-raised text-ink-secondary hover:bg-overlay hover:text-ink'
                 }`}
               >
                 {f.toUpperCase()}
@@ -138,7 +138,7 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
 
         {/* Scale */}
         <div className="mb-4">
-          <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-slate-500">
+          <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-ink-muted">
             Scale
           </p>
           <div className="flex items-center gap-2">
@@ -149,8 +149,8 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
                 onClick={() => setScale(p)}
                 className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                   scale === p
-                    ? 'bg-slate-600 text-white'
-                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-slate-100'
+                    ? 'bg-overlay text-ink'
+                    : 'bg-raised text-ink-secondary hover:bg-overlay hover:text-ink'
                 }`}
               >
                 {p}×
@@ -158,7 +158,7 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
             ))}
 
             {/* Divider */}
-            <div className="h-5 w-px bg-slate-700" />
+            <div className="h-5 w-px bg-edge" />
 
             {/* Free input */}
             <div className="flex items-center gap-1">
@@ -170,21 +170,21 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
                 value={scaleInput}
                 onChange={(e) => handleScaleInput(e.target.value)}
                 onBlur={handleScaleBlur}
-                className="w-16 rounded-lg border border-slate-700 bg-slate-800 px-2 py-2 text-center text-sm text-slate-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                className="w-16 rounded-lg border border-edge bg-raised px-2 py-2 text-center text-sm text-ink focus:border-accent-light focus:outline-none"
               />
-              <span className="text-sm text-slate-400">×</span>
+              <span className="text-sm text-ink-secondary">×</span>
             </div>
           </div>
         </div>
 
         {/* Output size preview */}
-        <div className="mb-5 rounded-lg border border-slate-800 bg-slate-800/50 px-4 py-3">
-          <p className="text-xs text-slate-500">Output size</p>
-          <p className="mt-0.5 font-mono text-sm text-slate-200">
+        <div className="mb-5 rounded-lg border border-edge bg-raised/50 px-4 py-3">
+          <p className="text-xs text-ink-muted">Output size</p>
+          <p className="mt-0.5 font-mono text-sm text-ink">
             {outputWidth} × {outputHeight} px
           </p>
           {showGrid && (
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-ink-muted">
               Grid lines will be included
             </p>
           )}
@@ -192,7 +192,7 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
 
         {/* Error */}
         {error && (
-          <p className="mb-4 rounded-lg border border-red-800 bg-red-900/30 px-3 py-2 text-xs text-red-400">
+          <p className="mb-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
             {error}
           </p>
         )}
@@ -202,14 +202,14 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
           <button
             onClick={onClose}
             disabled={loading}
-            className="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200 disabled:opacity-50"
+            className="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-ink-secondary transition-colors hover:bg-raised hover:text-ink disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleExport}
             disabled={loading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-ok px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-ok/80 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? (
               <>

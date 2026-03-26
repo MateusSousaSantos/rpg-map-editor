@@ -67,8 +67,8 @@ const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemPro
       style={style}
       className={`group flex items-center gap-2 px-2 py-1.5 rounded border transition-all cursor-pointer ${
         isSelected
-          ? 'bg-blue-600/20 border-blue-500/50'
-          : 'bg-slate-800/30 border-slate-700/50 hover:border-slate-600'
+          ? 'bg-accent/10 border-accent/30'
+          : 'bg-raised/30 border-edge hover:border-edge-strong'
       }`}
       onClick={handleClick}
     >
@@ -76,18 +76,18 @@ const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemPro
       <div
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing text-slate-500 hover:text-slate-300"
+        className="cursor-grab active:cursor-grabbing text-ink-muted hover:text-ink-secondary"
       >
         <FaGripVertical size={12} />
       </div>
 
       {/* Prop Icon */}
-      <FiPackage size={14} className="text-slate-400 shrink-0" />
+      <FiPackage size={14} className="text-ink-secondary shrink-0" />
 
       {/* Prop Name */}
       <div className="flex-1 min-w-0">
-        <div className="text-xs truncate text-slate-200">{displayName}</div>
-        <div className="text-[10px] text-slate-500">z: {prop.zIndex}</div>
+        <div className="text-xs truncate text-ink">{displayName}</div>
+        <div className="text-[10px] text-ink-muted">z: {prop.zIndex}</div>
       </div>
 
       {/* Visibility Toggle */}
@@ -96,7 +96,7 @@ const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemPro
           e.stopPropagation();
           updateProp(layerId, prop.id, { visible: !prop.visible });
         }}
-        className="text-slate-500 hover:text-slate-300 transition-colors"
+        className="text-ink-muted hover:text-ink transition-colors"
         title={prop.visible ? 'Hide' : 'Show'}
       >
         {prop.visible ? <FiEye size={14} /> : <FiEyeOff size={14} />}
@@ -105,7 +105,7 @@ const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemPro
         e.stopPropagation();
         if (onDelete) onDelete(prop.id);
       }}>
-        <FiTrash size={14} className="text-slate-500 hover:text-red-500 transition-colors" />
+        <FiTrash size={14} className="text-ink-muted hover:text-danger transition-colors" />
       </button>
     </div>
   );
@@ -165,22 +165,22 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
   }
 
   return (
-    <div className="border-b border-slate-800 pb-2">
+    <div className="border-b border-edge pb-2">
       {/* Layer Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-slate-800/50 transition-colors rounded"
+        className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-raised/50 transition-colors rounded"
       >
         {isExpanded ? (
-          <FiChevronDown size={14} className="text-slate-400" />
+          <FiChevronDown size={14} className="text-ink-secondary" />
         ) : (
-          <FiChevronRight size={14} className="text-slate-400" />
+          <FiChevronRight size={14} className="text-ink-secondary" />
         )}
-        <FiLayers size={14} className="text-slate-400" />
-        <span className="text-xs font-medium text-slate-300 flex-1 text-left">
+        <FiLayers size={14} className="text-ink-secondary" />
+        <span className="text-xs font-medium text-ink-secondary flex-1 text-left">
           {layer.name}
         </span>
-        <span className="text-[10px] text-slate-500">
+        <span className="text-[10px] text-ink-muted">
           {layer.props.length} prop{layer.props.length !== 1 ? 's' : ''}
         </span>
       </button>
@@ -237,18 +237,18 @@ export const PropsHierarchy = () => {
 
   return (
     <aside
-      className={`h-full bg-slate-900 border-r border-slate-800 transition-all duration-300 ease-in-out flex flex-col ${
+      className={`h-full bg-panel border-r border-edge transition-all duration-300 ease-in-out flex flex-col ${
         isOpen ? 'w-64' : 'w-12'
       }`}
     >
       {isOpen ? (
         <>
           {/* Header */}
-          <div className="h-12 border-b border-slate-800 flex items-center justify-between px-3 bg-slate-900/80">
-            <h2 className="text-sm font-semibold text-slate-100">Props Hierarchy</h2>
+          <div className="h-12 border-b border-edge flex items-center justify-between px-3 bg-panel/80">
+            <h2 className="text-sm font-semibold text-ink">Props Hierarchy</h2>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+              className="p-1.5 rounded hover:bg-raised text-ink-secondary hover:text-ink transition-colors"
               title="Collapse"
             >
               ←
@@ -259,9 +259,9 @@ export const PropsHierarchy = () => {
           <div className="flex-1 overflow-y-auto p-2" onClick={handleEmptyClick}>
             {layersWithProps.length === 0 ? (
               <div className="text-center py-8 text-slate-500 text-xs">
-                <FiPackage size={32} className="mx-auto mb-2 opacity-50" />
-                <p>No props placed yet</p>
-                <p className="mt-1 text-[10px]">Use the Prop tool to add props</p>
+                <FiPackage size={32} className="mx-auto mb-2 text-ink-muted opacity-50" />
+                <p className="text-ink-muted">No props placed yet</p>
+                <p className="mt-1 text-[10px] text-ink-muted">Use the Prop tool to add props</p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -273,7 +273,7 @@ export const PropsHierarchy = () => {
           </div>
 
           {/* Footer Info */}
-          <div className="border-t border-slate-800 px-3 py-2 text-[10px] text-slate-500">
+          <div className="border-t border-edge px-3 py-2 text-[10px] text-ink-muted">
             <p>💡 Drag to reorder (top = front)</p>
             <p>Click empty space or press Esc to deselect</p>
           </div>
@@ -283,7 +283,7 @@ export const PropsHierarchy = () => {
         <div className="flex-1 flex items-center justify-center">
           <button
             onClick={() => setIsOpen(true)}
-            className="p-1.5 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+            className="p-1.5 rounded hover:bg-raised text-ink-secondary hover:text-ink transition-colors"
             title="Expand Props Hierarchy"
           >
             →

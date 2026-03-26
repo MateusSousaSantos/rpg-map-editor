@@ -4,11 +4,11 @@ import { RightPanel } from "../components/RightPanel/RightPanel";
 import { PropsHierarchy } from "../components/PropsHierarchy";
 import { Toolbar } from "../components/Toolbar/Toolbar";
 import { ExportModal } from "../components/ExportModal/ExportModal";
+import { Navbar } from "../components/Layout/Navbar";
 import { useMapStore } from "../stores/mapStore";
 import { useUISelectionStore } from "../stores/uiSelectionStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { SpeedInsights } from "@vercel/speed-insights/react";
-import { Link } from "react-router-dom";
 
 function App() {
   const { map } = useMapStore();
@@ -25,29 +25,40 @@ function App() {
   }, [map, selectLayer, selectedLayerId]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden">
-      {/* Left Sidebar - Props Hierarchy */}
-      <PropsHierarchy />
+    <div className="flex flex-col h-screen w-screen overflow-hidden">
+      {/* Top Navbar */}
+      <Navbar />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col bg-canvas min-w-0">
-        <header className="h-12 border-b border-edge bg-panel flex items-center px-4 justify-between">
-          <Link to="/">
-            <h1 className="text-sm font-semibold text-ink">
-              RPG Map Editor
-            </h1>
-          </Link>
-        </header>
+      {/* Editor row */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar - Props Hierarchy */}
+        <PropsHierarchy />
 
-        {/* Map Canvas */}
-        <MapCanvas editable={true} />
-        {/* Floating Toolbar */}
-        <Toolbar onExportClick={() => setExportOpen(true)} />
-      </main>
+        {/* Main Content Area */}
+        <main className="flex-1 flex flex-col bg-canvas min-w-0 relative">
+          {/* Map info sub-bar */}
+          {map && (
+            <div className="h-8 border-b border-edge bg-panel/60 flex items-center px-4 gap-2 shrink-0">
+              <span className="text-xs font-semibold text-ink">{map.name}</span>
+              <span className="text-ink-muted text-xs">·</span>
+              <span className="text-xs text-ink-muted">
+                {map.width}×{map.height} tiles · {map.tileSize}px
+              </span>
+            </div>
+          )}
+
+          {/* Map Canvas */}
+          <MapCanvas editable={true} />
+          {/* Floating Toolbar */}
+          <Toolbar onExportClick={() => setExportOpen(true)} />
+        </main>
+
+        {/* Right Panel */}
+        <RightPanel />
+      </div>
+
       <SpeedInsights />
       <ExportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} />
-      {/* Right Panel */}
-      <RightPanel />
     </div>
   );
 }
