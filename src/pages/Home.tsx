@@ -238,7 +238,7 @@ function Home() {
               className="rounded-xl border border-edge overflow-hidden opacity-70 cursor-not-allowed"
             >
               <div
-                className={`h-32 bg-gradient-to-br ${map.gradient} hero-grid-bg relative`}
+                className={`h-32 bg-linear-to-br ${map.gradient} hero-grid-bg relative`}
               >
                 <div className="absolute inset-0 flex items-end p-3">
                   <div className="flex gap-1 flex-wrap">

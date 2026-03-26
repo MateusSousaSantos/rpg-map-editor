@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMapStore } from "../stores/mapStore";
+import { generateThumbnail } from "../utils/generateThumbnail";
 import { initializeAssets } from "../utils/tilesdefinition";
 import { Navbar } from "../components/Layout/Navbar";
 import { FiPlus, FiTrash2, FiSearch, FiMap } from "react-icons/fi";
@@ -30,6 +31,22 @@ function Vault() {
   });
 
   const allMaps = getAllMaps();
+
+  // Regenerate thumbnails for maps that are stale or missing one
+  useEffect(() => {
+    const maps = useMapStore.getState().getAllMaps();
+    maps.forEach((m) => {
+      const needsRegen =
+        !m.thumbnail ||
+        !m.thumbnailTimestamp ||
+        new Date(m.lastModified).getTime() > new Date(m.thumbnailTimestamp).getTime();
+      if (needsRegen) {
+        generateThumbnail(m).then((url) => {
+          if (url) useMapStore.getState().setMapThumbnail(m.id, url);
+        });
+      }
+    });
+  }, []);
 
   const filteredMaps = allMaps
     .filter((m) => m.name.toLowerCase().includes(search.toLowerCase()))
@@ -159,8 +176,17 @@ function Vault() {
               >
                 {/* Thumbnail */}
                 <div
-                  className={`h-28 bg-gradient-to-br ${MAP_GRADIENTS[i % MAP_GRADIENTS.length]} hero-grid-bg relative`}
+                  className={`h-28 bg-vault-to-br ${MAP_GRADIENTS[i % MAP_GRADIENTS.length]} hero-grid-bg relative`}
                 >
+                  {/* Rendered map snapshot */}
+                  {map.thumbnail && (
+                    <img
+                      src={map.thumbnail}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )}
+
                   {/* Delete button – visible on hover */}
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button

@@ -164,7 +164,7 @@ export async function exportMap(
 // Internal helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function drawTile(
+export function drawTile(
   ctx: CanvasRenderingContext2D,
   tile: TileInstance,
   def: OverlayTileDefinition,

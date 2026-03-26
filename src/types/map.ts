@@ -210,6 +210,10 @@ export interface MapDocument {
   selectedLayerId?: string;
   selectedTileIds?: string[];
   selectedPropId?: string;
+
+  // Vault thumbnail (generated JPEG snapshot, base64 data URL)
+  thumbnail?: string;
+  thumbnailTimestamp?: Date;
 }
 
 // ============================================================================

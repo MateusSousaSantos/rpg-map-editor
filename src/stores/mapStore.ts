@@ -133,6 +133,7 @@ interface MapState {
   loadMapById: (mapId: string) => void;
   deleteMapById: (mapId: string) => void;
   getAllMaps: () => MapDocument[];
+  setMapThumbnail: (mapId: string, dataUrl: string) => void;
   
   // Layer management
   addLayer: (layer: MapLayer) => void;
@@ -266,6 +267,19 @@ export const useMapStore = create<MapState>()(
       const state = get();
       return Array.from(state.savedMaps.values());
     },
+
+    setMapThumbnail: (mapId, dataUrl) =>
+      set((state) => {
+        const m = state.savedMaps.get(mapId);
+        if (m) {
+          m.thumbnail = dataUrl;
+          m.thumbnailTimestamp = new Date();
+        }
+        if (state.map && state.map.id === mapId) {
+          state.map.thumbnail = dataUrl;
+          state.map.thumbnailTimestamp = new Date();
+        }
+      }),
     
     updateMapMetadata: (changes) =>
       set((state) => {
