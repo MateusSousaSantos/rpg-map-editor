@@ -1,5 +1,39 @@
 @import "tailwindcss";
 
+@theme {
+  /* ── Surfaces ──────────────────────────────────────────── */
+  --color-canvas:    #020617; /* darkest bg — canvas / app shell         */
+  --color-panel:     #0f172a; /* sidebar / panel backgrounds              */
+  --color-raised:    #1e293b; /* hover bg, elevated items                 */
+  --color-overlay:   #263347; /* dropdown & modal backgrounds             */
+
+  /* ── Borders ───────────────────────────────────────────── */
+  --color-edge-faint:  #1e293b; /* subtle section dividers                */
+  --color-edge:        #334155; /* standard borders                       */
+  --color-edge-strong: #475569; /* emphasized borders                     */
+
+  /* ── Text ──────────────────────────────────────────────── */
+  --color-ink:           #f1f5f9; /* primary text                         */
+  --color-ink-secondary: #94a3b8; /* labels, secondary content            */
+  --color-ink-muted:     #64748b; /* placeholders, tips                   */
+
+  /* ── Accent — Indigo (tools, tabs, selected layers) ────── */
+  --color-accent:       #6366f1;
+  --color-accent-light: #818cf8;
+
+  /* ── Prop selection — Violet ───────────────────────────── */
+  --color-prop: #a78bfa;
+
+  /* ── Tile selection — Cyan ─────────────────────────────── */
+  --color-tile-sel: #22d3ee;
+
+  /* ── Status ────────────────────────────────────────────── */
+  --color-danger: #f87171; /* delete / destructive                        */
+  --color-vis:    #60a5fa; /* visibility eye active                       */
+  --color-lock:   #fb923c; /* lock active                                 */
+  --color-ok:     #34d399; /* export / confirm / success                  */
+}
+
 /* Global pixel art settings */
 * {
   image-rendering: -moz-crisp-edges;
@@ -57,7 +91,7 @@ canvas {
 }
 
 .opacity-slider::-webkit-slider-track {
-  background: #475569;
+  background: var(--color-edge-strong);
   height: 4px;
   border-radius: 2px;
 }
@@ -65,7 +99,7 @@ canvas {
 .opacity-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  background: #e2e8f0;
+  background: var(--color-ink);
   height: 12px;
   width: 12px;
   border-radius: 50%;
@@ -94,27 +128,27 @@ canvas {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1e293b; /* slate-800 */
+  background: var(--color-raised);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #475569; /* slate-600 */
+  background: var(--color-edge-strong);
   border-radius: 4px;
   transition: background-color 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #64748b; /* slate-500 */
+  background: var(--color-ink-muted);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: #94a3b8; /* slate-400 */
+  background: var(--color-ink-secondary);
 }
 
 /* Corner when both horizontal and vertical scrollbars are present */
 ::-webkit-scrollbar-corner {
-  background: #1e293b;
+  background: var(--color-raised);
 }
 
 /* Thin scrollbar variant for specific elements */
@@ -124,7 +158,7 @@ canvas {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #374151; /* gray-700 */
+  background: var(--color-edge);
   border-radius: 3px;
 }
 

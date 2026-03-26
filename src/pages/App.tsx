@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MapCanvas } from "../components/Canvas/MapCanvas";
-import { Sidebar } from "../components/Sidebar";
+import { RightPanel } from "../components/RightPanel/RightPanel";
 import { PropsHierarchy } from "../components/PropsHierarchy";
 import { Toolbar } from "../components/Toolbar/Toolbar";
 import { ExportModal } from "../components/ExportModal/ExportModal";
@@ -30,10 +30,10 @@ function App() {
       <PropsHierarchy />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col bg-slate-950 min-w-0">
-        <header className="h-12 border-b border-slate-800 bg-slate-900/80 flex items-center px-4 justify-between">
+      <main className="flex-1 flex flex-col bg-canvas min-w-0">
+        <header className="h-12 border-b border-edge bg-panel flex items-center px-4 justify-between">
           <Link to="/">
-            <h1 className="text-sm font-semibold text-slate-100">
+            <h1 className="text-sm font-semibold text-ink">
               RPG Map Editor
             </h1>
           </Link>
@@ -46,8 +46,8 @@ function App() {
       </main>
       <SpeedInsights />
       <ExportModal isOpen={exportOpen} onClose={() => setExportOpen(false)} />
-      {/* Sidebar */}
-      <Sidebar />
+      {/* Right Panel */}
+      <RightPanel />
     </div>
   );
 }
