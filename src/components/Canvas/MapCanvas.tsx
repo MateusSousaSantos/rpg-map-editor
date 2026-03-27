@@ -47,7 +47,7 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
   // Store state
   const map = useMapStore((state) => state.map);
   const { addProp } = useMapStore();
-  const { panX, panY, zoom, setPan, setZoom, resetViewport } =
+  const { panX, panY, zoom, setPan, setZoom, resetViewport, setDefaultPan } =
     useViewportStore();
   const showGrid = useUISelectionStore((state) => state.showGrid);
   const { selectedLayerId, selectProps } = useUISelectionStore();
@@ -76,6 +76,16 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
 
     return () => window.removeEventListener("resize", updateDimensions);
   }, []);
+
+  // Keep the default (centered) pan in sync with map dimensions and container size
+  useEffect(() => {
+    if (!map) return;
+    const mapPixelWidth = map.width * map.tileSize;
+    const mapPixelHeight = map.height * map.tileSize;
+    const centeredX = (dimensions.width - mapPixelWidth) / 2;
+    const centeredY = (dimensions.height - mapPixelHeight) / 2;
+    setDefaultPan(centeredX, centeredY);
+  }, [map?.width, map?.height, map?.tileSize, dimensions.width, dimensions.height]);
 
   // Keyboard shortcuts
   useEffect(() => {
