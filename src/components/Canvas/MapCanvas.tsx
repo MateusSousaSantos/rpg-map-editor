@@ -58,6 +58,10 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
     editable,
   });
 
+  // Touch pinch/pan state
+  const lastTouchDistRef = useRef<number | null>(null);
+  const lastTouchMidRef = useRef<{ x: number; y: number } | null>(null);
+
   // Handle container resize
   useEffect(() => {
     const updateDimensions = () => {
@@ -93,39 +97,27 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [zoom]);
 
-  // Handle wheel zoom
+  // Handle wheel zoom / trackpad scroll
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
 
     const stage = stageRef.current;
     if (!stage) return;
 
+    // Trackpad two-finger scroll (no ctrlKey) → pan the canvas
+    if (!e.evt.ctrlKey) {
+      setPan(panX - e.evt.deltaX, panY - e.evt.deltaY);
+      return;
+    }
+
+    // Pinch gesture on trackpad OR ctrl+wheel on mouse → zoom
     const oldScale = zoom;
     const pointer = stage.getPointerPosition();
-
     if (!pointer) return;
 
-    // Zoom in whole number steps: 0.5x, 1x, 2x, 3x, 4x, 5x
-    const zoomLevels = [0.1, 0.25, 0.5, 1, 2, 3, 4, 5];
-    const currentIndex = zoomLevels.findIndex((level) => level >= oldScale);
-    const direction = e.evt.deltaY > 0 ? -1 : 1;
-
-    let newScale: number;
-    if (direction > 0) {
-      // Zoom in
-      const nextIndex =
-        currentIndex === -1
-          ? 0
-          : Math.min(currentIndex + 1, zoomLevels.length - 1);
-      newScale = zoomLevels[nextIndex];
-    } else {
-      // Zoom out
-      const prevIndex =
-        currentIndex === -1
-          ? zoomLevels.length - 1
-          : Math.max(currentIndex - 1, 0);
-      newScale = zoomLevels[prevIndex];
-    }
+    // Pinch/ctrl-wheel: use continuous scale so trackpad feels natural
+    const delta = -e.evt.deltaY * 0.005;
+    const newScale = Math.min(5, Math.max(0.1, oldScale * (1 + delta)));
 
     // Calculate new position to zoom towards pointer
     const mousePointTo = {
@@ -214,6 +206,78 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
     // Note: canvasEvents handles its own mouseup cleanup via Stage events
   };
 
+  // ── Touch handlers ──────────────────────────────────────────────────────
+  const handleStageTouchStart = (e: Konva.KonvaEventObject<TouchEvent>) => {
+    const touches = e.evt.touches;
+    if (touches.length === 1) {
+      // Single finger: delegate to tool handler
+      if (e.target === e.target.getStage()) selectProps([]);
+      canvasEvents.handleTouchStart(e);
+    } else if (touches.length === 2) {
+      // Two fingers: begin pinch + pan tracking
+      const t0 = touches[0];
+      const t1 = touches[1];
+      const dx = t1.clientX - t0.clientX;
+      const dy = t1.clientY - t0.clientY;
+      lastTouchDistRef.current = Math.sqrt(dx * dx + dy * dy);
+      lastTouchMidRef.current = {
+        x: (t0.clientX + t1.clientX) / 2,
+        y: (t0.clientY + t1.clientY) / 2,
+      };
+    }
+  };
+
+  const handleStageTouchMove = (e: Konva.KonvaEventObject<TouchEvent>) => {
+    e.evt.preventDefault();
+    const touches = e.evt.touches;
+    if (touches.length === 1) {
+      canvasEvents.handleTouchMove(e);
+    } else if (touches.length === 2 && lastTouchDistRef.current !== null && lastTouchMidRef.current !== null) {
+      const t0 = touches[0];
+      const t1 = touches[1];
+      const dx = t1.clientX - t0.clientX;
+      const dy = t1.clientY - t0.clientY;
+      const newDist = Math.sqrt(dx * dx + dy * dy);
+      const newMid = {
+        x: (t0.clientX + t1.clientX) / 2,
+        y: (t0.clientY + t1.clientY) / 2,
+      };
+
+      // Pan: midpoint delta
+      const panDx = newMid.x - lastTouchMidRef.current.x;
+      const panDy = newMid.y - lastTouchMidRef.current.y;
+
+      // Zoom: distance ratio, zoom towards midpoint
+      const scaleFactor = newDist / lastTouchDistRef.current;
+      const oldScale = zoom;
+      const newScale = Math.min(5, Math.max(0.1, oldScale * scaleFactor));
+
+      const stage = stageRef.current;
+      if (stage) {
+        const rect = containerRef.current?.getBoundingClientRect();
+        const midX = rect ? newMid.x - rect.left : newMid.x;
+        const midY = rect ? newMid.y - rect.top : newMid.y;
+        const pointTo = {
+          x: (midX - panX) / oldScale,
+          y: (midY - panY) / oldScale,
+        };
+        const newPanX = midX - pointTo.x * newScale + panDx;
+        const newPanY = midY - pointTo.y * newScale + panDy;
+        setZoom(newScale);
+        setPan(newPanX, newPanY);
+      }
+
+      lastTouchDistRef.current = newDist;
+      lastTouchMidRef.current = newMid;
+    }
+  };
+
+  const handleStageTouchEnd = (e: Konva.KonvaEventObject<TouchEvent>) => {
+    canvasEvents.handleTouchEnd(e);
+    lastTouchDistRef.current = null;
+    lastTouchMidRef.current = null;
+  };
+
   // Zoom controls
   const handleZoomIn = () => {
     const zoomLevels = [1, 2, 3, 4, 5];
@@ -297,6 +361,7 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
     <div
       ref={containerRef}
       className="relative flex-1 overflow-hidden bg-slate-900"
+      style={{ touchAction: "none" }}
       tabIndex={0}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
@@ -316,6 +381,9 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
         onMouseMove={handleStageMouseMove}
         onMouseUp={canvasEvents.handleMouseUp}
         onMouseLeave={handleStageMouseLeave}
+        onTouchStart={handleStageTouchStart}
+        onTouchMove={handleStageTouchMove}
+        onTouchEnd={handleStageTouchEnd}
       >
         {/* Render each layer with its tiles and props grouped together, sorted by depthIndex */}
         {map.layers
@@ -335,7 +403,7 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
                 canvasWidth={dimensions.width}
                 canvasHeight={dimensions.height}
               />
-              
+
               {/* Render props for this layer (Konva elements for interactivity) */}
               <PropLayer layer={layer} />
             </Layer>
