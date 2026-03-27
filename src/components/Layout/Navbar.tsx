@@ -42,14 +42,6 @@ export const Navbar = () => {
       </div>
 
       <div className="flex-1" />
-
-      {/* CTA */}
-      <Link
-        to="/vault"
-        className="px-4 py-1.5 bg-accent hover:bg-accent-light text-white text-sm font-semibold rounded-lg transition-colors"
-      >
-        Open Editor
-      </Link>
     </nav>
   );
 };

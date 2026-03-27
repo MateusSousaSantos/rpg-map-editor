@@ -12,20 +12,20 @@ import {
 const BENTO_FEATURES = [
   {
     id: "layers",
-    title: "Layer-Based Editing",
+    title: "Edição baseada em Layers",
     description:
-      "Stack unlimited tile and prop layers. Show, hide, lock, and reorder — non-destructive editing at its core.",
+      "Empilhe camadas ilimitadas de tiles e props. Mostre, oculte, bloqueie e reordene — edição não destrutiva no seu núcleo.",
     icon: FiLayers,
     color: "text-accent",
     bg: "bg-accent/10",
-    span: "col-span-2 row-span-2",
+    span: "col-span-1 row-span-2",
     large: true,
   },
   {
     id: "autotile",
     title: "Autotiling",
     description:
-      "Smart tile connections. Place terrain and let the engine handle corner and edge variants automatically.",
+      "Conexões inteligentes de tiles. Coloque o terreno e deixe o motor lidar automaticamente com variantes de canto e borda.",
     icon: FiGrid,
     color: "text-tile-sel",
     bg: "bg-tile-sel/10",
@@ -34,9 +34,9 @@ const BENTO_FEATURES = [
   },
   {
     id: "props",
-    title: "Props & Objects",
+    title: "Props & Objetos",
     description:
-      "Free-position decorative props with z-index, opacity, rotation and scale.",
+      "Posicione livremente props decorativos com z-index, opacidade, rotação e escala.",
     icon: FiBox,
     color: "text-prop",
     bg: "bg-prop/10",
@@ -45,9 +45,9 @@ const BENTO_FEATURES = [
   },
   {
     id: "export",
-    title: "PNG / JPEG Export",
+    title: "Exportar PNG / JPEG",
     description:
-      "Export maps at 1x, 2x, or 4x resolution with optional grid overlay.",
+      "Exporte mapas em resolução 1x, 2x ou 4x com sobreposição de grade opcional.",
     icon: FiDownload,
     color: "text-ok",
     bg: "bg-ok/10",
@@ -58,7 +58,7 @@ const BENTO_FEATURES = [
     id: "zoom",
     title: "Zoom & Pan",
     description:
-      "Scroll to zoom 0.1x to 5x. Space+drag to pan. Keyboard shortcuts for fluid navigation.",
+      "Role para dar zoom de 0,1x a 5x. Espaço+arrastar para mover. Atalhos de teclado para navegação fluida.",
     icon: FiZoomIn,
     color: "text-vis",
     bg: "bg-vis/10",
@@ -67,9 +67,9 @@ const BENTO_FEATURES = [
   },
   {
     id: "renderer",
-    title: "Native Canvas Renderer",
+    title: "Renderizador Canvas Nativo",
     description:
-      "Viewport-culled tile rendering via the native Canvas 2D API. Handles large maps without dropping frames.",
+      "Renderização de tiles com viewport-culled via a API Canvas 2D nativa. Lida com mapas grandes sem perder frames.",
     icon: FiCpu,
     color: "text-lock",
     bg: "bg-lock/10",
@@ -152,26 +152,28 @@ function Home() {
             Early Access - v0.0.0
           </div>
           <h1 className="text-6xl sm:text-7xl font-extrabold tracking-tight text-ink leading-none mb-6">
-            Build Your
+            Construa seus mapas de RPG no navegador usando o
             <br />
-            <span className="text-accent">RPG World</span>
+            <span className="text-accent">Ordem Paranormal map editor</span>
           </h1>
           <p className="text-ink-secondary text-lg max-w-xl mx-auto mb-10 leading-relaxed">
-            A powerful, browser-based tile and prop editor for 2D RPGs.
-            Layer-based, autotiling-capable, and export-ready.
+            Uma ferramente completa para a sua mesa feita por um fã de RPG para
+            fãs de RPG. Crie mapas das suas campanhas com uma interface
+            intuitiva, exporte para PNG/JPEG e compartilhe com seus amigos. Dê
+            vida as suas historias e missoes com o tematica de ordem!
           </p>
           <div className="flex items-center justify-center gap-3">
             <Link
               to="/vault"
               className="px-6 py-3 bg-accent hover:bg-accent-light text-white font-semibold rounded-xl text-sm transition-colors"
             >
-              Open My Maps
+              Abrir meus mapas
             </Link>
             <a
               href="#discover"
               className="px-6 py-3 bg-raised hover:bg-overlay border border-edge text-ink-secondary hover:text-ink font-medium rounded-xl text-sm transition-colors"
             >
-              See Community
+              Ver Comunidade
             </a>
           </div>
         </div>
@@ -181,10 +183,10 @@ function Home() {
       <section className="px-6 py-20 max-w-5xl mx-auto w-full">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-ink mb-3">
-            Everything you need to build worlds
+            Tudo o que você precisa para construir seus mapas de Ordem
           </h2>
           <p className="text-ink-muted">
-            A complete toolset for 2D game map creation
+            Um conjunto completo de ferramentas para criação de mapas 2D
           </p>
         </div>
         <div className="grid grid-cols-3 gap-4 auto-rows-fr">
@@ -222,13 +224,13 @@ function Home() {
       <section id="discover" className="px-6 py-20 max-w-5xl mx-auto w-full">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-ink">Community Maps</h2>
+            <h2 className="text-2xl font-bold text-ink">Mapas da Comunidade</h2>
             <p className="text-ink-muted text-sm mt-1">
-              Explore maps shared by the community
+              Explore mapas compartilhados pela comunidade
             </p>
           </div>
           <span className="px-3 py-1 rounded-full bg-ok/15 border border-ok/30 text-ok text-xs font-medium">
-            Coming Soon
+            Em breve
           </span>
         </div>
         <div className="grid grid-cols-3 gap-4">
@@ -267,7 +269,8 @@ function Home() {
       {/* Footer */}
       <footer className="mt-auto border-t border-edge px-6 py-6 text-center">
         <p className="text-ink-muted text-xs">
-          RPG Map Editor - Early Access v0.0.0 - Built with React, Konva and Tailwind CSS
+          RPG Map Editor - Early Access v0.0.0 - Built with React, Konva and
+          Tailwind CSS
         </p>
       </footer>
     </div>
