@@ -17,29 +17,33 @@ interface CursorLayerProps {
  * Displays a semi-transparent preview of the selected tile at cursor position
  */
 export const CursorLayer = memo(({ tileSize, cursorGridX, cursorGridY, boxPreview }: CursorLayerProps) => {
-  const { activeTool, selectedTileDefinitionId } = useToolStore();
+  const { activeTool, boxMode, selectedTileDefinitionId } = useToolStore();
   const map = useMapStore((state) => state.map);
-  
+
   // Find tile definition (before any early returns)
   const definition = map?.tileDefinitions.find(
     (def: BaseTileDefinition | OverlayTileDefinition) => def.id === selectedTileDefinitionId
   );
-  
+
   // Load tile image unconditionally (hooks must be called in the same order every render)
   const [image] = useImage(definition?.textureUrl || '');
-  
+
   // Show box preview when dragging
   if (activeTool === 'box' && boxPreview && map) {
     const minX = Math.min(boxPreview.startX, boxPreview.endX);
     const maxX = Math.max(boxPreview.startX, boxPreview.endX);
     const minY = Math.min(boxPreview.startY, boxPreview.endY);
     const maxY = Math.max(boxPreview.startY, boxPreview.endY);
-    
+
     const boxWidth = (maxX - minX + 1) * tileSize;
     const boxHeight = (maxY - minY + 1) * tileSize;
     const boxX = minX * tileSize;
     const boxY = minY * tileSize;
-    
+
+    const isErase = boxMode === 'erase';
+    const fillColor = isErase ? 'rgba(220, 38, 38, 0.2)' : 'rgba(138, 43, 226, 0.2)';
+    const strokeColor = isErase ? 'rgba(220, 38, 38, 0.8)' : 'rgba(138, 43, 226, 0.8)';
+
     return (
       <Layer listening={false}>
         {/* Box preview background */}
@@ -48,13 +52,13 @@ export const CursorLayer = memo(({ tileSize, cursorGridX, cursorGridY, boxPrevie
           y={boxY}
           width={boxWidth}
           height={boxHeight}
-          fill="rgba(138, 43, 226, 0.2)"
-          stroke="rgba(138, 43, 226, 0.8)"
+          fill={fillColor}
+          stroke={strokeColor}
           strokeWidth={2}
         />
-        
-        {/* Preview tiles in the box */}
-        {image && definition && (() => {
+
+        {/* Preview tiles in the box (paint mode only) */}
+        {!isErase && image && definition && (() => {
           const tiles = [];
           for (let y = minY; y <= maxY; y++) {
             for (let x = minX; x <= maxX; x++) {
@@ -80,22 +84,22 @@ export const CursorLayer = memo(({ tileSize, cursorGridX, cursorGridY, boxPrevie
       </Layer>
     );
   }
-  
+
   // Show cursor for brush tool
   if (activeTool !== 'brush' || !selectedTileDefinitionId || !map) return null;
   if (cursorGridX === null || cursorGridY === null) return null;
-  
+
   // Check if cursor is within bounds
   if (cursorGridX < 0 || cursorGridX >= map.width || cursorGridY < 0 || cursorGridY >= map.height) {
     return null;
   }
-  
+
   if (!definition) return null;
-  
+
   // Calculate world position
   const x = cursorGridX * tileSize;
   const y = cursorGridY * tileSize;
-  
+
   return (
     <Layer listening={false}>
       {/* Grid highlight */}
@@ -108,7 +112,7 @@ export const CursorLayer = memo(({ tileSize, cursorGridX, cursorGridY, boxPrevie
         stroke="rgba(255, 255, 255, 0.5)"
         strokeWidth={1}
       />
-      
+
       {/* Tile preview */}
       {image && (
         <KonvaImage

@@ -6,7 +6,7 @@ interface ToolbarProps {
 }
 
 export const Toolbar = ({ onExportClick }: ToolbarProps) => {
-  const { activeTool, setActiveTool } = useToolStore();
+  const { activeTool, boxMode, setActiveTool } = useToolStore();
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-3 py-2 rounded-full border border-edge bg-panel/95 backdrop-blur-sm shadow-2xl">
@@ -43,13 +43,20 @@ export const Toolbar = ({ onExportClick }: ToolbarProps) => {
         onClick={() => setActiveTool("box")}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
           activeTool === "box"
-            ? "bg-prop/20 text-prop"
+            ? boxMode === "erase"
+              ? "bg-danger/20 text-danger"
+              : "bg-prop/20 text-prop"
             : "text-ink-muted hover:text-ink hover:bg-raised"
         }`}
-        title="Box Paint Tool (X)"
+        title={`Box Tool (X) — ${boxMode === "erase" ? "Erase" : "Paint"} mode`}
       >
         <FiSquare size={16} />
         <span className="text-xs font-medium">Box</span>
+        {boxMode === "erase" ? (
+          <FiTrash2 size={10} className="opacity-70" />
+        ) : (
+          <FiEdit2 size={10} className="opacity-70" />
+        )}
       </button>
 
       {/* Divider */}

@@ -25,7 +25,7 @@ interface CanvasEventsParams {
  * @param editable - Whether the canvas is in edit mode
  */
 export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
-  const { activeTool, selectedTileDefinitionId, selectedTileGridType, selectedPropDefinitionId } = useToolStore();
+  const { activeTool, boxMode, selectedTileDefinitionId, selectedTileGridType, selectedPropDefinitionId } = useToolStore();
   const { addTile, removeTile, getTileAt, map, addProp } = useMapStore();
   const { zoom, panX, panY } = useViewportStore();
   const { selectTiles, toggleTileSelection, clearSelection, selectedLayerId, selectProps, togglePropSelection } = useUISelectionStore();
@@ -209,6 +209,42 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
   }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTileAt]);
 
   /**
+   * Handle box erase tool - remove all tiles in a rectangular area
+   */
+  const handleBoxEraseTool = useCallback((startX: number, startY: number, endX: number, endY: number) => {
+    if (!map) return;
+
+    // Get the selected layer, or default to first layer
+    const layer = selectedLayerId
+      ? map.layers.find(l => l.id === selectedLayerId)
+      : map.layers[0];
+    if (!layer || layer.locked) return;
+
+    // Calculate bounds
+    const minX = Math.min(startX, endX);
+    const maxX = Math.max(startX, endX);
+    const minY = Math.min(startY, endY);
+    const maxY = Math.max(startY, endY);
+
+    const tileIdsToRemove: string[] = [];
+    const tileTypes: TileType[] = ['terrain', 'overlay', 'wall', 'overflow'];
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        if (!isInBounds(x, y)) continue;
+        tileTypes.forEach((type) => {
+          const tile = getTileAt(layer.id, x, y, type);
+          if (tile) tileIdsToRemove.push(tile.id);
+        });
+      }
+    }
+
+    if (tileIdsToRemove.length > 0) {
+      useMapStore.getState().batchRemoveTiles(layer.id, tileIdsToRemove);
+    }
+  }, [map, selectedLayerId, isInBounds, getTileAt]);
+
+  /**
    * Handle selection tool - select tiles or props
    */
   const handleSelectionTool = useCallback((gridX: number, gridY: number, worldX: number, worldY: number, isMultiSelect: boolean) => {
@@ -384,14 +420,18 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
    * Handle mouse up event
    */
   const handleMouseUp = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    // Handle box paint completion
+    // Handle box tool completion (paint or erase)
     if (activeTool === 'box' && boxStartRef.current && isDrawingRef.current) {
       const stage = e.target.getStage();
       if (stage) {
         const pointer = stage.getPointerPosition();
         if (pointer) {
           const { gridX, gridY } = screenToGrid(pointer.x, pointer.y);
-          handleBoxPaintTool(boxStartRef.current.x, boxStartRef.current.y, gridX, gridY);
+          if (boxMode === 'erase') {
+            handleBoxEraseTool(boxStartRef.current.x, boxStartRef.current.y, gridX, gridY);
+          } else {
+            handleBoxPaintTool(boxStartRef.current.x, boxStartRef.current.y, gridX, gridY);
+          }
         }
       }
     }
@@ -400,7 +440,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     lastDrawnTileRef.current = null;
     boxStartRef.current = null;
     setBoxPreview(null);
-  }, [activeTool, screenToGrid, handleBoxPaintTool]);
+  }, [activeTool, boxMode, screenToGrid, handleBoxPaintTool, handleBoxEraseTool]);
 
   /**
    * Handle touch start — single finger only; mirrors handleMouseDown
@@ -491,7 +531,11 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         const pointer = stage.getPointerPosition();
         if (pointer) {
           const { gridX, gridY } = screenToGrid(pointer.x, pointer.y);
-          handleBoxPaintTool(boxStartRef.current.x, boxStartRef.current.y, gridX, gridY);
+          if (boxMode === 'erase') {
+            handleBoxEraseTool(boxStartRef.current.x, boxStartRef.current.y, gridX, gridY);
+          } else {
+            handleBoxPaintTool(boxStartRef.current.x, boxStartRef.current.y, gridX, gridY);
+          }
         }
       }
     }
@@ -500,7 +544,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     lastDrawnTileRef.current = null;
     boxStartRef.current = null;
     setBoxPreview(null);
-  }, [activeTool, screenToGrid, handleBoxPaintTool]);
+  }, [activeTool, boxMode, screenToGrid, handleBoxPaintTool, handleBoxEraseTool]);
 
   return {
     handleMouseDown,

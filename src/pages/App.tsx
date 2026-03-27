@@ -19,8 +19,11 @@ function App() {
   useKeyboardShortcuts();
 
   useEffect(() => {
-    if (map && map.layers.length > 0 && !selectedLayerId) {
-      selectLayer(map.layers[0].id);
+    if (map && map.layers.length > 0) {
+      const layerExistsInMap = map.layers.some((l) => l.id === selectedLayerId);
+      if (!layerExistsInMap) {
+        selectLayer(map.layers[0].id);
+      }
     }
   }, [map, selectLayer, selectedLayerId]);
 
