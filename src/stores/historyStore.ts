@@ -111,7 +111,7 @@ interface HistoryState {
   history: MapAction[];
   historyIndex: number;
   maxHistorySize: number;
-  
+
   // Actions
   addAction: (action: MapAction) => void;
   undo: () => void;
@@ -125,28 +125,28 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
   history: [],
   historyIndex: -1,
   maxHistorySize: 50,
-  
+
   addAction: (action) =>
     set((state) => {
       // Remove any actions after current index (branching timeline)
       let newHistory = state.history.slice(0, state.historyIndex + 1);
-      
+
       // Add new action
       newHistory.push(action);
       let newIndex = newHistory.length - 1;
-      
+
       // Limit history size
       if (newHistory.length > state.maxHistorySize) {
         newHistory.shift();
         newIndex--;
       }
-      
+
       return {
         history: newHistory,
         historyIndex: newIndex,
       };
     }),
-  
+
   undo: () => {
     const state = get();
     if (state.historyIndex < 0) return;
@@ -157,7 +157,7 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
 
     set({ historyIndex: state.historyIndex - 1 });
   },
-  
+
   redo: () => {
     const state = get();
     if (state.historyIndex >= state.history.length - 1) return;
@@ -168,17 +168,17 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
 
     set({ historyIndex: state.historyIndex + 1 });
   },
-  
+
   canUndo: () => {
     const state = get();
     return state.historyIndex >= 0;
   },
-  
+
   canRedo: () => {
     const state = get();
     return state.historyIndex < state.history.length - 1;
   },
-  
+
   clearHistory: () =>
     set(() => ({
       history: [],

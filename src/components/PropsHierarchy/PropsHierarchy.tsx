@@ -39,7 +39,7 @@ interface PropItemProps {
 const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemProps) => {
   const updateProp = useMapStore((state) => state.updateProp);
   const propDefinitions = useMapStore((state) => state.map?.propDefinitions || []);
-  
+
   const {
     attributes,
     listeners,
@@ -54,7 +54,7 @@ const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemPro
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
-  
+
   const definition = propDefinitions.find(def => def.id === prop.definitionId);
   const displayName = prop.name || definition?.name || 'Unnamed Prop';
 
@@ -130,7 +130,7 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
   const { selectedPropIds, selectProps, togglePropSelection } = useUISelectionStore();
   const updateProp = useMapStore((state) => state.updateProp);
   const removeProp = useMapStore((state) => state.removeProp);
-  
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -150,7 +150,7 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
 
       // Reorder the array
       const newOrder = arrayMove(sortedProps, oldIndex, newIndex);
-      
+
       // Update z-indices based on new order (higher index = higher z-index)
       // Since we display highest z-index first, we need to reverse the assignment
       const historyActions: MapAction[] = [];
@@ -259,10 +259,10 @@ export const PropsHierarchy = () => {
 
   // Get layers sorted by depth index
   const sortedLayers = [...map.layers].sort((a, b) => b.depthIndex - a.depthIndex);
-  
+
   // Filter to only show layers that have props
   const layersWithProps = sortedLayers.filter(layer => layer.props.length > 0);
-  
+
   const handleEmptyClick = (e: React.MouseEvent) => {
     // Only deselect if clicking directly on the container, not on children
     if (e.target === e.currentTarget) {

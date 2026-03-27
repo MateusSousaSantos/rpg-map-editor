@@ -1,6 +1,6 @@
 /**
  * PropLayer - Renders all props for a single map layer
- * 
+ *
  * Handles:
  * - Rendering props in z-index order
  * - Selection state visualization
@@ -32,12 +32,12 @@ export const PropLayer = memo(({ layer }: PropLayerProps) => {
   const selectedPropIds = useUISelectionStore((state) => state.selectedPropIds);
   const transformerRef = useRef<Konva.Transformer>(null);
   const groupRefs = useRef<Map<string, Konva.Group>>(new Map());
-  
+
   // Update transformer when selection changes
   useEffect(() => {
     const transformer = transformerRef.current;
     if (!transformer) return;
-    
+
     const selectedNodes: Konva.Group[] = [];
     sortedProps.forEach(prop => {
       if (selectedPropIds.has(prop.id)) {
@@ -47,26 +47,26 @@ export const PropLayer = memo(({ layer }: PropLayerProps) => {
         }
       }
     });
-    
+
     transformer.nodes(selectedNodes);
     transformer.getLayer()?.batchDraw();
   }, [selectedPropIds, sortedProps]);
 
   if (!layer.visible) return null;
-  
+
   return (
     <>
       {sortedProps.map(prop => (
-        <PropGroup 
-          key={prop.id} 
-          prop={prop} 
+        <PropGroup
+          key={prop.id}
+          prop={prop}
           layerId={layer.id}
           layerOpacity={layer.opacity}
           onMount={(node) => groupRefs.current.set(prop.id, node)}
           onUnmount={() => groupRefs.current.delete(prop.id)}
         />
       ))}
-      
+
       {/* Transformer for resize and rotation */}
       <Transformer
         ref={transformerRef}
@@ -105,10 +105,10 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
   const updateProp = useMapStore((state) => state.updateProp);
   const { getTexture, loadTexture } = useTextureCache();
   const groupRef = useRef<Konva.Group>(null);
-  
+
   // Get prop definition
   const definition = propDefinitions.find(def => def.id === prop.definitionId);
-  
+
   // Register/unregister group ref
   useEffect(() => {
     if (groupRef.current) {
@@ -118,7 +118,7 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
       onUnmount();
     };
   }, [onMount, onUnmount]);
-  
+
   // Load image via shared texture cache (deduplicates loads across props)
   useEffect(() => {
     if (!definition) return;
@@ -136,14 +136,14 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
         console.error(`Failed to load prop image: ${url}`);
       });
   }, [definition, getTexture, loadTexture]);
-  
+
   // Handle click on prop
   const handleClick = (e: any) => {
     e.cancelBubble = true; // Stop event from propagating to stage
-    
+
     const isMultiSelect = e.evt.ctrlKey || e.evt.metaKey;
     const isSelected = selectedPropIds.has(prop.id);
-    
+
     if (isMultiSelect) {
       togglePropSelection(prop.id);
     } else {
@@ -155,7 +155,7 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
       }
     }
   };
-  
+
   // Handle transform end - update prop transform properties
   const handleTransformEnd = () => {
     const node = groupRef.current;
@@ -204,7 +204,7 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
       previousChanges,
     });
   };
-  
+
   // Handle drag end - update prop position
   const handleDragEnd = () => {
     const node = groupRef.current;
@@ -212,7 +212,7 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
 
     const newChanges = { x: node.x(), y: node.y() };
     const previousChanges = { x: prop.x, y: prop.y };
-    
+
     updateProp(layerId, prop.id, newChanges);
 
     // Record history
@@ -224,15 +224,15 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
       previousChanges,
     });
   };
-  
+
   if (!definition || !image || !prop.visible) {
     return null;
   }
-  
+
   // Use definition dimensions for rendering to avoid blur from incorrect sizing
   const renderWidth = definition.width;
   const renderHeight = definition.height;
-  
+
   return (
     <Group
       ref={groupRef}
