@@ -14,12 +14,12 @@ export interface BaseTileDefinition {
   type: TileType;
   textureUrl: string;      // path to sprite
   tileSize: number;        // 16, 32, 64, etc. - can change globally
-  
+
   // Overflow tiles by direction - auto-placed when this tile is placed
   // Maps direction to overflow tile definition ID
   // E.g., { 'top': 'roof-top', 'left': 'wall-left' }
   overflowTilesByDirection?: Record<Direction, string>;
-  
+
   // Autotiling system
   autotileGroup?: string;      // e.g., "grass", "stone_wall" — tiles with the same group connect
   autotileBasePath?: string;   // e.g., "/tilesets/terrain/grass/autotile/" — variant files named {bitmask}.png
@@ -44,7 +44,7 @@ export interface AutotileRule {
   };
 }
 
-export type Direction = 
+export type Direction =
   | 'top' | 'right' | 'bottom' | 'left'
   | 'topRight' | 'bottomRight' | 'bottomLeft' | 'topLeft';
 
@@ -73,19 +73,20 @@ export interface TileInstance {
   definitionId: string;       // references BaseTileDefinition
   gridX: number;             // grid coordinates (0-based)
   gridY: number;
-  
+
   // Autotiling state
   currentVariant?: number;    // which variant of the autotile is shown
-  
+
   // Instance-specific overrides
   opacity?: number;           // overlay tiles might have custom opacity
   tint?: string;             // optional color overlay (hex)
   rotation?: 0 | 90 | 180 | 270;  // only for specific tile types
-  
+
   type: TileType;
   // Metadata
   properties?: Record<string, any>;  // custom game data
-  overflowTiles?: TileInstance[]; // for overflow tiles associated with this tile
+  // For overflow tiles: ID of the parent tile that spawned this overflow
+  parentTileId?: string;
 }
 
 // ============================================================================
@@ -103,12 +104,12 @@ export interface PropDefinition {
   width: number;              // world width in pixels
   height: number;             // world height in pixels
   tags: string[];             // "outdoor", "wooden", "interactive", etc.
-  
+
   // Default appearance
   defaultOpacity?: number;
   defaultScaleX?: number;
   defaultScaleY?: number;
-  
+
   metadata?: Record<string, any>;  // asset metadata
 }
 
@@ -118,26 +119,26 @@ export interface PropDefinition {
 export interface PropInstance {
   id: string;
   definitionId: string;       // references PropDefinition
-  
+
   // Free positioning (not grid-based)
   x: number;                  // world position
   y: number;
   width: number;              // can differ from definition
   height: number;
-  
+
   // Transform
   rotation: number;           // 0-360 degrees
   scaleX: number;             // 1.0 = normal
   scaleY: number;
-  
+
   // Appearance
   opacity: number;            // 0-1
   tint?: string;              // optional color overlay (hex)
-  
+
   // Organization
   zIndex: number;             // ordering within layer
   locked?: boolean;
-  
+
   // Data
   name?: string;              // optional custom name
   properties?: Record<string, any>;  // custom game data
@@ -156,18 +157,18 @@ export interface MapLayer {
   id: string;
   name: string;
   type: 'tile' | 'mixed';     // 'tile' = only tiles, 'mixed' = tiles + props
-  
+
   // Visibility & depth
   visible: boolean;
   opacity: number;            // 0-1, affects everything in layer
   depthIndex: number;         // 0 = bottom, higher = on top
   locked?: boolean;           // prevent editing
-  
+
   // Content - Flattened tile storage for O(1) lookups
   tiles: Map<string, TileInstance>;      // key: "x,y,type" for coordinate lookups
   tilesById: Map<string, TileInstance>;  // key: tile.id for ID-based lookups
   props: PropInstance[];
-  
+
   // Metadata
   metadata?: Record<string, any>;
 }
@@ -186,26 +187,26 @@ export interface MapDocument {
   version: string;            // for future compatibility
   createdAt: Date;
   lastModified: Date;
-  
+
   // Dimensions
   width: number;              // grid width (tiles)
   height: number;             // grid height (tiles)
   tileSize: number;           // 16, 32, 64, etc. (matches TileDefinition.tileSize)
-  
+
   // Content
   layers: MapLayer[];         // ordered by depthIndex
-  
+
   // Asset libraries
   tileDefinitions: (BaseTileDefinition | OverlayTileDefinition)[];
   propDefinitions: PropDefinition[];
-  
+
   // Viewport/canvas state (optional, for resuming editing session)
   viewport?: {
     panX: number;
     panY: number;
     zoom: number;
   };
-  
+
   // UI state (optional)
   selectedLayerId?: string;
   selectedTileIds?: string[];
@@ -233,17 +234,17 @@ export interface SerializedMapDocument {
   width: number;
   height: number;
   tileSize: number;
-  
+
   layers: SerializedMapLayer[];
   tileDefinitions: (BaseTileDefinition | OverlayTileDefinition)[];
   propDefinitions: PropDefinition[];
-  
+
   viewport?: {
     panX: number;
     panY: number;
     zoom: number;
   };
-  
+
   selectedLayerId?: string;
   selectedTileIds?: string[];
   selectedPropId?: string;
@@ -257,7 +258,7 @@ export interface SerializedMapLayer {
   opacity: number;
   depthIndex: number;
   locked?: boolean;
-  
+
   tiles: {
     key: string;               // "x,y,type"
     value: TileInstance;
@@ -267,7 +268,7 @@ export interface SerializedMapLayer {
     value: TileInstance;
   }[];
   props: PropInstance[];
-  
+
   metadata?: Record<string, any>;
 }
 
@@ -305,7 +306,7 @@ export interface WorldCoordinate {
 /**
  * For undo/redo system
  */
-export type MapAction = 
+export type MapAction =
   | { type: 'ADD_TILE'; layerId: string; tile: TileInstance }
   | { type: 'REMOVE_TILE'; layerId: string; tileId: string }
   | { type: 'UPDATE_TILE'; layerId: string; tileId: string; changes: Partial<TileInstance> }

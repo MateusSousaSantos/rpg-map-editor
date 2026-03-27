@@ -24,10 +24,10 @@ interface VisibleBounds {
 
 /**
  * Native Canvas Tile Renderer Hook
- * 
+ *
  * Renders tiles to an off-screen canvas using Canvas 2D API for better performance.
  * Returns a canvas element that can be displayed as a Konva.Image.
- * 
+ *
  * Features:
  * - Viewport culling (only draws visible tiles + padding)
  * - Texture caching integration
@@ -47,18 +47,18 @@ export const useNativeCanvasTiles = ({
 }: UseNativeCanvasTilesProps) => {
   const { panX, panY, zoom } = useViewportStore();
   const { getTexture, loadTexture } = useTextureCache();
-  
+
   // Canvas refs
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-  
+
   // Track if we need to redraw
   const [redrawTrigger, setRedrawTrigger] = useState(0);
   // Incremented after each completed draw so consumers can force Konva repaint
   const [drawVersion, setDrawVersion] = useState(0);
   const prevTilesRef = useRef<Map<string, TileInstance>>(new Map());
   const loadingTexturesRef = useRef<Set<string>>(new Set());
-  
+
   // Calculate visible tile bounds with padding
   const visibleBounds = useMemo((): VisibleBounds => {
     // Convert canvas bounds to world coordinates
@@ -66,7 +66,7 @@ export const useNativeCanvasTiles = ({
     const worldTop = -panY / zoom;
     const worldRight = (canvasWidth - panX) / zoom;
     const worldBottom = (canvasHeight - panY) / zoom;
-    
+
     // Convert to grid coordinates with padding for smooth scrolling
     const padding = 2;
     return {
@@ -76,7 +76,7 @@ export const useNativeCanvasTiles = ({
       maxY: Math.min(mapHeight - 1, Math.ceil(worldBottom / tileSize) + padding),
     };
   }, [panX, panY, zoom, canvasWidth, canvasHeight, tileSize, mapWidth]);
-  
+
   // Filter visible tiles
   const visibleTiles = useMemo(() => {
     const tiles: TileInstance[] = [];
@@ -131,16 +131,16 @@ export const useNativeCanvasTiles = ({
       setRedrawTrigger(prev => prev + 1);
     }
   }, []);
-  
+
   // Update canvas size when viewport bounds change
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     // Calculate canvas size to fit visible area + padding
     const width = (visibleBounds.maxX - visibleBounds.minX + 1) * tileSize;
     const height = (visibleBounds.maxY - visibleBounds.minY + 1) * tileSize;
-    
+
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width;
       canvas.height = height;
@@ -148,24 +148,24 @@ export const useNativeCanvasTiles = ({
     // Always trigger redraw when visible bounds change (pan/zoom)
     setRedrawTrigger(prev => prev + 1);
   }, [visibleBounds, tileSize]);
-  
+
   // Check if tiles have changed
   useEffect(() => {
     const currentTiles = layer.tilesById;
     const prevTiles = prevTilesRef.current;
-    
+
     // Quick size check
     if (currentTiles.size !== prevTiles.size) {
       prevTilesRef.current = new Map(currentTiles);
       setRedrawTrigger(prev => prev + 1);
       return;
     }
-    
+
     // Deep check for changes
     let hasChanges = false;
     for (const [id, tile] of currentTiles) {
       const prevTile = prevTiles.get(id);
-      if (!prevTile || 
+      if (!prevTile ||
           prevTile.gridX !== tile.gridX ||
           prevTile.gridY !== tile.gridY ||
           prevTile.definitionId !== tile.definitionId ||
@@ -176,13 +176,13 @@ export const useNativeCanvasTiles = ({
         break;
       }
     }
-    
+
     if (hasChanges) {
       prevTilesRef.current = new Map(currentTiles);
       setRedrawTrigger(prev => prev + 1);
     }
   }, [layer.tilesById]);
-  
+
   // Load textures for visible tiles and trigger redraw when loaded
   useEffect(() => {
     const texturesToLoad: string[] = [];
@@ -193,7 +193,7 @@ export const useNativeCanvasTiles = ({
         loadingTexturesRef.current.add(url);
       }
     };
-    
+
     for (const tile of visibleTiles) {
       const definition = tileDefinitions.get(tile.definitionId);
       if (!definition) continue;
@@ -206,20 +206,11 @@ export const useNativeCanvasTiles = ({
       if (resolvedUrl && resolvedUrl !== definition.textureUrl) {
         enqueue(resolvedUrl);
       }
-      
-      // Also check overflow tiles
-      if (tile.overflowTiles) {
-        for (const overflowTile of tile.overflowTiles) {
-          const overflowDef = tileDefinitions.get(overflowTile.definitionId);
-          if (!overflowDef) continue;
-          enqueue(overflowDef.textureUrl);
-        }
-      }
     }
-    
+
     // Load textures and trigger redraw when complete
     if (texturesToLoad.length > 0) {
-      Promise.all(texturesToLoad.map(url => 
+      Promise.all(texturesToLoad.map(url =>
         loadTexture(url)
           .then(() => {
             loadingTexturesRef.current.delete(url);
@@ -232,21 +223,21 @@ export const useNativeCanvasTiles = ({
       });
     }
   }, [visibleTiles, resolvedTextureUrls, tileDefinitions, getTexture, loadTexture]);
-  
+
   // Draw tiles to canvas
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
     if (!canvas || !ctx) return;
     if (canvas.width === 0 || canvas.height === 0) return;
-    
+
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     // Calculate offset for rendering (tiles are offset by visible bounds)
     const offsetX = visibleBounds.minX * tileSize;
     const offsetY = visibleBounds.minY * tileSize;
-    
+
     // Draw each visible tile
     for (const tile of visibleTiles) {
       const definition = tileDefinitions.get(tile.definitionId);
@@ -256,25 +247,25 @@ export const useNativeCanvasTiles = ({
       const resolvedUrl = resolvedTextureUrls.get(tile.id) ?? definition.textureUrl;
       const texture = getTexture(resolvedUrl) ?? getTexture(definition.textureUrl);
       if (!texture || !texture.complete) continue;
-      
+
       // Calculate position relative to canvas
       const x = tile.gridX * tileSize - offsetX;
       const y = tile.gridY * tileSize - offsetY;
-      
+
       // Get opacity
-      const tileOpacity = tile.opacity ?? 
+      const tileOpacity = tile.opacity ??
         (definition.type === 'overlay' ? (definition as OverlayTileDefinition).opacity ?? 1 : 1);
       const opacity = tileOpacity * layerOpacity;
-      
+
       // Get rotation
       const rotation = tile.rotation ?? 0;
-      
+
       // Save context state
       ctx.save();
-      
+
       // Apply opacity
       ctx.globalAlpha = opacity;
-      
+
       // Apply rotation if needed
       if (rotation !== 0) {
         const centerX = x + tileSize / 2;
@@ -283,14 +274,14 @@ export const useNativeCanvasTiles = ({
         ctx.rotate((rotation * Math.PI) / 180);
         ctx.translate(-centerX, -centerY);
       }
-      
+
       // Apply color tint if specified
       if (tile.tint) {
         // Parse hex color
         const r = parseInt(tile.tint.slice(1, 3), 16);
         const g = parseInt(tile.tint.slice(3, 5), 16);
         const b = parseInt(tile.tint.slice(5, 7), 16);
-        
+
         // Draw with color tint using multiply blend
         ctx.globalCompositeOperation = 'multiply';
         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
@@ -302,44 +293,15 @@ export const useNativeCanvasTiles = ({
         // Draw normally
         ctx.drawImage(texture, x, y, tileSize, tileSize);
       }
-      
+
       // Restore context state
       ctx.restore();
-      
-      // Draw overflow tiles
-      if (tile.overflowTiles && tile.overflowTiles.length > 0) {
-        for (const overflowTile of tile.overflowTiles) {
-          const overflowDef = tileDefinitions.get(overflowTile.definitionId);
-          if (!overflowDef) continue;
-          
-          const overflowTexture = getTexture(overflowDef.textureUrl);
-          if (!overflowTexture || !overflowTexture.complete) continue;
-          
-          const overflowX = overflowTile.gridX * tileSize - offsetX;
-          const overflowY = overflowTile.gridY * tileSize - offsetY;
-          
-          ctx.save();
-          ctx.globalAlpha = opacity;
-          
-          const overflowRotation = overflowTile.rotation ?? 0;
-          if (overflowRotation !== 0) {
-            const centerX = overflowX + tileSize / 2;
-            const centerY = overflowY + tileSize / 2;
-            ctx.translate(centerX, centerY);
-            ctx.rotate((overflowRotation * Math.PI) / 180);
-            ctx.translate(-centerX, -centerY);
-          }
-          
-          ctx.drawImage(overflowTexture, overflowX, overflowY, tileSize, tileSize);
-          ctx.restore();
-        }
-      }
     }
 
     // Signal consumers that a new frame was drawn
     setDrawVersion(prev => prev + 1);
   }, [redrawTrigger, visibleTiles, resolvedTextureUrls, visibleBounds, tileSize, layerOpacity, tileDefinitions, getTexture]);
-  
+
   // Return canvas and position information
   return {
     canvas: canvasRef.current,

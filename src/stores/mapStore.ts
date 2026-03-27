@@ -37,7 +37,7 @@ const getAdjacentCoordinate = (gridX: number, gridY: number, direction: Directio
     'bottomLeft': { dx: -1, dy: 1 },
     'bottomRight': { dx: 1, dy: 1 },
   };
-  
+
   const offset = directionMap[direction];
   return { x: gridX + offset.dx, y: gridY + offset.dy };
 };
@@ -52,27 +52,27 @@ const createOverflowTilesFromDefinition = (
   layer: MapLayer
 ): TileInstance[] => {
   const overflowTiles: TileInstance[] = [];
-  
+
   // Check if definition has overflow tiles by direction
   if (!parentDefinition.overflowTilesByDirection) {
     return overflowTiles;
   }
-  
+
   for (const [direction, overflowDefId] of Object.entries(parentDefinition.overflowTilesByDirection)) {
     const overflowDef = map.tileDefinitions.find((def) => def.id === overflowDefId);
     if (!overflowDef) {
       console.warn(`Overflow tile definition not found: ${overflowDefId}`);
       continue;
     }
-    
+
     // Calculate adjacent coordinate
     const { x, y } = getAdjacentCoordinate(parentTile.gridX, parentTile.gridY, direction as Direction);
-    
+
     // Check bounds
     if (x < 0 || x >= map.width || y < 0 || y >= map.height) {
       continue;
     }
-    
+
     // Check if there's already a parent tile at this position that would generate its own overflows
     // Iterate through all tile types to see if any parent tile exists there
     let existingParentTile = false;
@@ -88,12 +88,12 @@ const createOverflowTilesFromDefinition = (
         }
       }
     }
-    
+
     // Skip if a parent tile already exists here
     if (existingParentTile) {
       continue;
     }
-    
+
     // Create overflow tile instance at adjacent coordinate
     const overflowTile: TileInstance = {
       id: crypto.randomUUID(),
@@ -101,11 +101,12 @@ const createOverflowTilesFromDefinition = (
       gridX: x,
       gridY: y,
       type: overflowDef.type,
+      parentTileId: parentTile.id,
     };
-    
+
     overflowTiles.push(overflowTile);
   }
-  
+
   return overflowTiles;
 };
 
@@ -116,31 +117,31 @@ const createOverflowTilesFromDefinition = (
 interface MapState {
   // Map document (current working copy)
   map: MapDocument | null;
-  
+
   // All saved maps
   savedMaps: Map<string, MapDocument>;
-  
+
   // ID of currently loaded map
   currentMapId: string | null;
-  
+
   // Actions
   createMap: (name: string, width: number, height: number, tileSize: number) => void;
   loadMap: (mapData: MapDocument) => void;
   updateMapMetadata: (changes: Partial<Pick<MapDocument, 'name' | 'width' | 'height' | 'tileSize'>>) => void;
-  
+
   // Map management
   saveMap: (map: MapDocument) => void;
   loadMapById: (mapId: string) => void;
   deleteMapById: (mapId: string) => void;
   getAllMaps: () => MapDocument[];
   setMapThumbnail: (mapId: string, dataUrl: string) => void;
-  
+
   // Layer management
   addLayer: (layer: MapLayer) => void;
   removeLayer: (layerId: string) => void;
   updateLayer: (layerId: string, changes: Partial<MapLayer>) => void;
   reorderLayers: (layerIds: string[]) => void;
-  
+
   // Tile operations
   addTile: (layerId: string, tile: TileInstance) => void;
   removeTile: (layerId: string, tileId: string) => void;
@@ -148,28 +149,22 @@ interface MapState {
   getTileAt: (layerId: string, gridX: number, gridY: number, type: TileType) => TileInstance | undefined;
   getNeighbors: (layerId: string, gridX: number, gridY: number, type: TileType) => TileInstance[];
   getTilesByType: (layerId: string, type: TileType) => TileInstance[];
-  
+
   // Batch operations for performance
   batchAddTiles: (layerId: string, tiles: TileInstance[]) => void;
   batchRemoveTiles: (layerId: string, tileIds: string[]) => void;
-  
-  // Overflow tile operations (must have parent tile)
-  addOverflowTile: (layerId: string, parentTileId: string, overflowTile: TileInstance) => void;
-  removeOverflowTile: (layerId: string, parentTileId: string, overflowTileId: string) => void;
-  updateOverflowTile: (layerId: string, parentTileId: string, overflowTileId: string, changes: Partial<TileInstance>) => void;
-  batchAddOverflowTiles: (layerId: string, parentTileId: string, overflowTiles: TileInstance[]) => void;
-  
+
   // Prop operations
   addProp: (layerId: string, prop: PropInstance) => void;
   removeProp: (layerId: string, propId: string) => void;
   updateProp: (layerId: string, propId: string, changes: Partial<PropInstance>) => void;
   getProp: (layerId: string, propId: string) => PropInstance | undefined;
-  
+
   // Asset management
   addTileDefinition: (definition: BaseTileDefinition | OverlayTileDefinition) => void;
   removeTileDefinition: (definitionId: string) => void;
   updateTileDefinition: (definitionId: string, changes: Partial<BaseTileDefinition>) => void;
-  
+
   addPropDefinition: (definition: PropDefinition) => void;
   removePropDefinition: (definitionId: string) => void;
   updatePropDefinition: (definitionId: string, changes: Partial<PropDefinition>) => void;
@@ -181,7 +176,7 @@ export const useMapStore = create<MapState>()(
       map: null,
       savedMaps: new Map(),
       currentMapId: null,
-      
+
       createMap: (name, width, height, tileSize) =>
         set((state) => {
           const newMap: MapDocument = {
@@ -210,15 +205,15 @@ export const useMapStore = create<MapState>()(
             tileDefinitions: [],
             propDefinitions: [],
           };
-          
+
           // Save to savedMaps
           state.savedMaps.set(newMap.id, newMap);
-          
+
           // Set as current
           state.map = newMap;
           state.currentMapId = newMap.id;
         }),
-    
+
     loadMap: (mapData) =>
       set((state) => {
         state.map = {
@@ -227,7 +222,7 @@ export const useMapStore = create<MapState>()(
           lastModified: new Date(mapData.lastModified),
         };
       }),
-    
+
     saveMap: (map) =>
       set((state) => {
         map.lastModified = new Date();
@@ -235,7 +230,7 @@ export const useMapStore = create<MapState>()(
         state.map = map;
         state.currentMapId = map.id;
       }),
-    
+
     loadMapById: (mapId) =>
       set((state) => {
         const mapToLoad = state.savedMaps.get(mapId);
@@ -253,7 +248,7 @@ export const useMapStore = create<MapState>()(
           state.currentMapId = mapId;
         }
       }),
-    
+
     deleteMapById: (mapId) =>
       set((state) => {
         state.savedMaps.delete(mapId);
@@ -262,7 +257,7 @@ export const useMapStore = create<MapState>()(
           state.currentMapId = null;
         }
       }),
-    
+
     getAllMaps: () => {
       const state = get();
       return Array.from(state.savedMaps.values());
@@ -280,7 +275,7 @@ export const useMapStore = create<MapState>()(
           state.map.thumbnailTimestamp = new Date();
         }
       }),
-    
+
     updateMapMetadata: (changes) =>
       set((state) => {
         if (state.map) {
@@ -292,7 +287,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     addLayer: (layer) =>
       set((state) => {
         if (state.map) {
@@ -304,7 +299,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     removeLayer: (layerId) =>
       set((state) => {
         if (state.map) {
@@ -314,7 +309,7 @@ export const useMapStore = create<MapState>()(
             layer.tiles.clear();
             layer.tilesById.clear();
           }
-          
+
           state.map.layers = state.map.layers.filter((l) => l.id !== layerId);
           state.map.lastModified = new Date();
           // Sync to savedMaps
@@ -323,7 +318,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     updateLayer: (layerId, changes) =>
       set((state) => {
         if (state.map) {
@@ -338,7 +333,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     reorderLayers: (layerIds) =>
       set((state) => {
         if (state.map) {
@@ -346,7 +341,7 @@ export const useMapStore = create<MapState>()(
           state.map.layers = layerIds
             .map((id) => layerMap.get(id))
             .filter(Boolean) as MapLayer[];
-          
+
           state.map.layers.forEach((layer, index) => {
             layer.depthIndex = index;
           });
@@ -357,7 +352,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     addTile: (layerId, tile) =>
       set((state) => {
         if (state.map) {
@@ -367,7 +362,7 @@ export const useMapStore = create<MapState>()(
             const coordKey = `${tile.gridX},${tile.gridY},${tile.type}`;
             layer.tiles.set(coordKey, tile);
             layer.tilesById.set(tile.id, tile);
-            
+
             // Auto-create overflow tiles at adjacent coordinates if definition specifies them
             const definition = state.map.tileDefinitions.find((def) => def.id === tile.definitionId);
             if (definition && definition.overflowTilesByDirection) {
@@ -381,7 +376,7 @@ export const useMapStore = create<MapState>()(
                 }
               }
             }
-            
+
             state.map.lastModified = new Date();
             // Sync to savedMaps
             if (state.currentMapId) {
@@ -390,7 +385,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     removeTile: (layerId, tileId) =>
       set((state) => {
         if (state.map) {
@@ -402,9 +397,13 @@ export const useMapStore = create<MapState>()(
               const coordKey = `${tile.gridX},${tile.gridY},${tile.type}`;
               layer.tiles.delete(coordKey);
               layer.tilesById.delete(tileId);
-              // Cascade delete: remove overflow tiles if they exist
-              if (tile.overflowTiles && tile.overflowTiles.length > 0) {
-                delete tile.overflowTiles;
+              // Cascade delete: remove all overflow tiles that were spawned by this parent
+              for (const candidate of layer.tilesById.values()) {
+                if (candidate.parentTileId === tileId) {
+                  const childKey = `${candidate.gridX},${candidate.gridY},${candidate.type}`;
+                  layer.tiles.delete(childKey);
+                  layer.tilesById.delete(candidate.id);
+                }
               }
               state.map.lastModified = new Date();
               // Sync to savedMaps
@@ -415,7 +414,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     updateTile: (layerId, tileId, changes) =>
       set((state) => {
         if (state.map) {
@@ -425,19 +424,19 @@ export const useMapStore = create<MapState>()(
             const tile = layer.tilesById.get(tileId);
             if (tile) {
               // Check if coordinate or type changes (affects Map key)
-              const coordChanged = 
+              const coordChanged =
                 (changes.gridX !== undefined && changes.gridX !== tile.gridX) ||
                 (changes.gridY !== undefined && changes.gridY !== tile.gridY) ||
                 (changes.type !== undefined && changes.type !== tile.type);
-              
+
               if (coordChanged) {
                 // Remove old key from tiles Map
                 const oldKey = `${tile.gridX},${tile.gridY},${tile.type}`;
                 layer.tiles.delete(oldKey);
-                
+
                 // Update tile properties
                 Object.assign(tile, changes);
-                
+
                 // Add with new key to tiles Map
                 const newKey = `${tile.gridX},${tile.gridY},${tile.type}`;
                 layer.tiles.set(newKey, tile);
@@ -445,7 +444,7 @@ export const useMapStore = create<MapState>()(
                 // No coordinate change, just update properties
                 Object.assign(tile, changes);
               }
-              
+
               state.map.lastModified = new Date();
               // Sync to savedMaps
               if (state.currentMapId) {
@@ -455,22 +454,22 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     getTileAt: (layerId, gridX, gridY, type) => {
       const state = get();
       const layer = state.map?.layers.find((l) => l.id === layerId);
       if (!layer) return undefined;
-      
+
       // O(1) lookup with composite key
       const key = `${gridX},${gridY},${type}`;
       return layer.tiles.get(key);
     },
-    
+
     getNeighbors: (layerId, gridX, gridY, type) => {
       const state = get();
       const layer = state.map?.layers.find((l) => l.id === layerId);
       if (!layer) return [];
-      
+
       const neighbors: TileInstance[] = [];
       const offsets = [
         { dx: 0, dy: -1 },   // top
@@ -482,7 +481,7 @@ export const useMapStore = create<MapState>()(
         { dx: -1, dy: 0 },   // left
         { dx: -1, dy: -1 },  // topLeft
       ];
-      
+
       for (const { dx, dy } of offsets) {
         const nx = gridX + dx;
         const ny = gridY + dy;
@@ -492,15 +491,15 @@ export const useMapStore = create<MapState>()(
           neighbors.push(neighbor);
         }
       }
-      
+
       return neighbors;
     },
-    
+
     getTilesByType: (layerId, type) => {
       const state = get();
       const layer = state.map?.layers.find((l) => l.id === layerId);
       if (!layer) return [];
-      
+
       const tiles: TileInstance[] = [];
       for (const tile of layer.tilesById.values()) {
         if (tile.type === type) {
@@ -509,7 +508,7 @@ export const useMapStore = create<MapState>()(
       }
       return tiles;
     },
-    
+
     batchAddTiles: (layerId, tiles) =>
       set((state) => {
         if (state.map) {
@@ -520,7 +519,7 @@ export const useMapStore = create<MapState>()(
               const coordKey = `${tile.gridX},${tile.gridY},${tile.type}`;
               layer.tiles.set(coordKey, tile);
               layer.tilesById.set(tile.id, tile);
-              
+
               // Auto-create overflow tiles at adjacent coordinates if definition specifies them
               const definition = state.map.tileDefinitions.find((def) => def.id === tile.definitionId);
               if (definition && definition.overflowTilesByDirection) {
@@ -543,14 +542,23 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     batchRemoveTiles: (layerId, tileIds) =>
       set((state) => {
         if (state.map) {
           const layer = state.map.layers.find((l) => l.id === layerId);
           if (layer) {
             // Batch remove all tiles in a single state update
+            // Also collect overflow children to cascade-delete
+            const allIdsToRemove = new Set(tileIds);
             for (const tileId of tileIds) {
+              for (const candidate of layer.tilesById.values()) {
+                if (candidate.parentTileId === tileId) {
+                  allIdsToRemove.add(candidate.id);
+                }
+              }
+            }
+            for (const tileId of allIdsToRemove) {
               const tile = layer.tilesById.get(tileId);
               if (tile) {
                 const coordKey = `${tile.gridX},${tile.gridY},${tile.type}`;
@@ -566,97 +574,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
-    // Overflow tile operations - overflow tiles must have a parent tile
-    addOverflowTile: (layerId, parentTileId, overflowTile) =>
-      set((state) => {
-        if (state.map) {
-          const layer = state.map.layers.find((l) => l.id === layerId);
-          if (layer) {
-            const parentTile = layer.tilesById.get(parentTileId);
-            if (parentTile) {
-              // Initialize overflowTiles array if it doesn't exist
-              if (!parentTile.overflowTiles) {
-                parentTile.overflowTiles = [];
-              }
-              parentTile.overflowTiles.push(overflowTile);
-              state.map.lastModified = new Date();
-              // Sync to savedMaps
-              if (state.currentMapId) {
-                state.savedMaps.set(state.currentMapId, state.map);
-              }
-            }
-          }
-        }
-      }),
-    
-    removeOverflowTile: (layerId, parentTileId, overflowTileId) =>
-      set((state) => {
-        if (state.map) {
-          const layer = state.map.layers.find((l) => l.id === layerId);
-          if (layer) {
-            const parentTile = layer.tilesById.get(parentTileId);
-            if (parentTile && parentTile.overflowTiles) {
-              parentTile.overflowTiles = parentTile.overflowTiles.filter(
-                (t) => t.id !== overflowTileId
-              );
-              // Remove overflowTiles array if empty
-              if (parentTile.overflowTiles.length === 0) {
-                delete parentTile.overflowTiles;
-              }
-              state.map.lastModified = new Date();
-              // Sync to savedMaps
-              if (state.currentMapId) {
-                state.savedMaps.set(state.currentMapId, state.map);
-              }
-            }
-          }
-        }
-      }),
-    
-    updateOverflowTile: (layerId, parentTileId, overflowTileId, changes) =>
-      set((state) => {
-        if (state.map) {
-          const layer = state.map.layers.find((l) => l.id === layerId);
-          if (layer) {
-            const parentTile = layer.tilesById.get(parentTileId);
-            if (parentTile && parentTile.overflowTiles) {
-              const overflowTile = parentTile.overflowTiles.find((t) => t.id === overflowTileId);
-              if (overflowTile) {
-                Object.assign(overflowTile, changes);
-                state.map.lastModified = new Date();
-                // Sync to savedMaps
-                if (state.currentMapId) {
-                  state.savedMaps.set(state.currentMapId, state.map);
-                }
-              }
-            }
-          }
-        }
-      }),
-    
-    batchAddOverflowTiles: (layerId, parentTileId, overflowTiles) =>
-      set((state) => {
-        if (state.map) {
-          const layer = state.map.layers.find((l) => l.id === layerId);
-          if (layer) {
-            const parentTile = layer.tilesById.get(parentTileId);
-            if (parentTile) {
-              // Initialize overflowTiles array if it doesn't exist
-              if (!parentTile.overflowTiles) {
-                parentTile.overflowTiles = [];
-              }
-              parentTile.overflowTiles.push(...overflowTiles);
-              state.map.lastModified = new Date();
-              // Sync to savedMaps
-              if (state.currentMapId) {
-                state.savedMaps.set(state.currentMapId, state.map);
-              }
-            }
-          }
-        }
-      }),
-    
+
     addProp: (layerId, prop) =>
       set((state) => {
         if (state.map) {
@@ -671,7 +589,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     removeProp: (layerId, propId) =>
       set((state) => {
         if (state.map) {
@@ -686,7 +604,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     updateProp: (layerId, propId, changes) =>
       set((state) => {
         if (state.map) {
@@ -704,13 +622,13 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     getProp: (layerId, propId) => {
       const state = get();
       const layer = state.map?.layers.find((l) => l.id === layerId);
       return layer?.props.find((p) => p.id === propId);
     },
-    
+
     addTileDefinition: (definition) =>
       set((state) => {
         if (state.map) {
@@ -722,7 +640,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     removeTileDefinition: (definitionId) =>
       set((state) => {
         if (state.map) {
@@ -732,7 +650,7 @@ export const useMapStore = create<MapState>()(
           state.map.lastModified = new Date();
         }
       }),
-    
+
     updateTileDefinition: (definitionId, changes) =>
       set((state) => {
         if (state.map) {
@@ -743,7 +661,7 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    
+
     addPropDefinition: (definition) =>
       set((state) => {
         if (state.map) {
@@ -751,7 +669,7 @@ export const useMapStore = create<MapState>()(
           state.map.lastModified = new Date();
         }
       }),
-    
+
     removePropDefinition: (definitionId) =>
       set((state) => {
         if (state.map) {
@@ -761,7 +679,7 @@ export const useMapStore = create<MapState>()(
           state.map.lastModified = new Date();
         }
       }),
-    
+
     updatePropDefinition: (definitionId, changes) =>
       set((state) => {
         if (state.map) {
@@ -816,7 +734,7 @@ export const useMapStore = create<MapState>()(
             }));
           }
         }
-        
+
         // Restore savedMaps
         if (state?.savedMaps && Array.isArray(state.savedMaps)) {
           const mapsArray = state.savedMaps as any[];
