@@ -14,6 +14,7 @@ import { useUISelectionStore } from '../../stores/uiSelectionStore';
 import { useTextureCache } from '../../stores/textureCache';
 import type { MapLayer, PropInstance } from '../../types/map';
 import { useMapStore } from '../../stores/mapStore';
+import { useHistoryStore } from '../../stores/historyStore';
 import Konva from 'konva';
 
 interface PropLayerProps {
@@ -171,15 +172,36 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
     const newWidth = prop.width * scaleX;
     const newHeight = prop.height * scaleY;
 
-    // Update the prop with new dimensions and transform
-    updateProp(layerId, prop.id, {
+    const newChanges = {
       x: node.x(),
       y: node.y(),
-      width: newWidth, // Keep consistent width
-      height: newHeight, // Keep consistent height
+      width: newWidth,
+      height: newHeight,
       rotation: rotation,
-      scaleX: scaleX, // Store the new scale directly
-      scaleY: scaleY, // Store the new scale directly
+      scaleX: scaleX,
+      scaleY: scaleY,
+    };
+
+    const previousChanges = {
+      x: prop.x,
+      y: prop.y,
+      width: prop.width,
+      height: prop.height,
+      rotation: prop.rotation,
+      scaleX: prop.scaleX,
+      scaleY: prop.scaleY,
+    };
+
+    // Update the prop with new dimensions and transform
+    updateProp(layerId, prop.id, newChanges);
+
+    // Record history
+    useHistoryStore.getState().addAction({
+      type: 'UPDATE_PROP',
+      layerId,
+      propId: prop.id,
+      changes: newChanges,
+      previousChanges,
     });
   };
   
@@ -187,10 +209,19 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
   const handleDragEnd = () => {
     const node = groupRef.current;
     if (!node) return;
+
+    const newChanges = { x: node.x(), y: node.y() };
+    const previousChanges = { x: prop.x, y: prop.y };
     
-    updateProp(layerId, prop.id, { 
-      x: node.x(), 
-      y: node.y() 
+    updateProp(layerId, prop.id, newChanges);
+
+    // Record history
+    useHistoryStore.getState().addAction({
+      type: 'UPDATE_PROP',
+      layerId,
+      propId: prop.id,
+      changes: newChanges,
+      previousChanges,
     });
   };
   

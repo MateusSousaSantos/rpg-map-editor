@@ -22,6 +22,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { useMapStore } from '../../stores/mapStore';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
+import { useHistoryStore } from '../../stores/historyStore';
+import type { MapAction } from '../../types/map';
 import { FiEye, FiEyeOff, FiChevronDown, FiChevronRight, FiPackage, FiLayers, FiTrash } from 'react-icons/fi';
 import { FaGripVertical } from 'react-icons/fa';
 import type { PropInstance, MapLayer } from '../../types/map';
@@ -94,7 +96,15 @@ const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemPro
       <button
         onClick={(e) => {
           e.stopPropagation();
-          updateProp(layerId, prop.id, { visible: !prop.visible });
+          const newVisible = !prop.visible;
+          updateProp(layerId, prop.id, { visible: newVisible });
+          useHistoryStore.getState().addAction({
+            type: 'UPDATE_PROP',
+            layerId,
+            propId: prop.id,
+            changes: { visible: newVisible },
+            previousChanges: { visible: prop.visible },
+          });
         }}
         className="text-ink-muted hover:text-ink transition-colors"
         title={prop.visible ? 'Hide' : 'Show'}
@@ -143,12 +153,26 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
       
       // Update z-indices based on new order (higher index = higher z-index)
       // Since we display highest z-index first, we need to reverse the assignment
+      const historyActions: MapAction[] = [];
       newOrder.forEach((prop, index) => {
         const newZIndex = newOrder.length - 1 - index;
         if (prop.zIndex !== newZIndex) {
+          historyActions.push({
+            type: 'UPDATE_PROP',
+            layerId: layer.id,
+            propId: prop.id,
+            changes: { zIndex: newZIndex },
+            previousChanges: { zIndex: prop.zIndex },
+          });
           updateProp(layer.id, prop.id, { zIndex: newZIndex });
         }
       });
+
+      if (historyActions.length === 1) {
+        useHistoryStore.getState().addAction(historyActions[0]);
+      } else if (historyActions.length > 1) {
+        useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
+      }
     }
   };
 
@@ -204,7 +228,18 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
                   layerId={layer.id}
                   isSelected={selectedPropIds.has(prop.id)}
                   onSelect={handlePropSelect}
-                  onDelete={(propId) => removeProp(layer.id, propId)}
+                  onDelete={(propId) => {
+                    const prop = layer.props.find(p => p.id === propId);
+                    if (prop) {
+                      useHistoryStore.getState().addAction({
+                        type: 'REMOVE_PROP',
+                        layerId: layer.id,
+                        propId: prop.id,
+                        removedProp: { ...prop },
+                      });
+                    }
+                    removeProp(layer.id, propId);
+                  }}
                 />
               ))}
             </SortableContext>

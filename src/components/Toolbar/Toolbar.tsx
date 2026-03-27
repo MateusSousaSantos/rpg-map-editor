@@ -1,5 +1,6 @@
 import { useToolStore } from "../../stores/toolStore";
-import { FiEdit2, FiTrash2, FiSquare, FiDownload } from "react-icons/fi";
+import { useHistoryStore } from "../../stores/historyStore";
+import { FiEdit2, FiTrash2, FiSquare, FiDownload, FiRotateCcw, FiRotateCw } from "react-icons/fi";
 
 interface ToolbarProps {
   onExportClick: () => void;
@@ -7,6 +8,7 @@ interface ToolbarProps {
 
 export const Toolbar = ({ onExportClick }: ToolbarProps) => {
   const { activeTool, boxMode, setActiveTool } = useToolStore();
+  const { undo, redo, canUndo, canRedo } = useHistoryStore();
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-3 py-2 rounded-full border border-edge bg-panel/95 backdrop-blur-sm shadow-2xl">
@@ -57,6 +59,29 @@ export const Toolbar = ({ onExportClick }: ToolbarProps) => {
         ) : (
           <FiEdit2 size={10} className="opacity-70" />
         )}
+      </button>
+
+      {/* Divider */}
+      <div className="w-px h-5 bg-edge mx-1" />
+
+      {/* Undo */}
+      <button
+        onClick={undo}
+        disabled={!canUndo()}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors text-ink-muted hover:text-ink hover:bg-raised disabled:opacity-30 disabled:pointer-events-none"
+        title="Undo (Ctrl+Z)"
+      >
+        <FiRotateCcw size={16} />
+      </button>
+
+      {/* Redo */}
+      <button
+        onClick={redo}
+        disabled={!canRedo()}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors text-ink-muted hover:text-ink hover:bg-raised disabled:opacity-30 disabled:pointer-events-none"
+        title="Redo (Ctrl+Shift+Z)"
+      >
+        <FiRotateCw size={16} />
       </button>
 
       {/* Divider */}

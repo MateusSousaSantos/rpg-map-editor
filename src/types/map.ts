@@ -305,16 +305,17 @@ export interface WorldCoordinate {
 
 /**
  * For undo/redo system
+ * Each action stores enough data to both apply (redo) and reverse (undo).
  */
 export type MapAction =
   | { type: 'ADD_TILE'; layerId: string; tile: TileInstance }
-  | { type: 'REMOVE_TILE'; layerId: string; tileId: string }
-  | { type: 'UPDATE_TILE'; layerId: string; tileId: string; changes: Partial<TileInstance> }
+  | { type: 'REMOVE_TILE'; layerId: string; tileId: string; removedTile: TileInstance }
+  | { type: 'UPDATE_TILE'; layerId: string; tileId: string; changes: Partial<TileInstance>; previousChanges: Partial<TileInstance> }
   | { type: 'ADD_PROP'; layerId: string; prop: PropInstance }
-  | { type: 'REMOVE_PROP'; layerId: string; propId: string }
-  | { type: 'UPDATE_PROP'; layerId: string; propId: string; changes: Partial<PropInstance> }
+  | { type: 'REMOVE_PROP'; layerId: string; propId: string; removedProp: PropInstance }
+  | { type: 'UPDATE_PROP'; layerId: string; propId: string; changes: Partial<PropInstance>; previousChanges: Partial<PropInstance> }
   | { type: 'ADD_LAYER'; layer: MapLayer }
-  | { type: 'REMOVE_LAYER'; layerId: string }
-  | { type: 'UPDATE_LAYER'; layerId: string; changes: Partial<MapLayer> }
-  | { type: 'REORDER_LAYERS'; newOrder: string[] }
+  | { type: 'REMOVE_LAYER'; layerId: string; removedLayer: MapLayer }
+  | { type: 'UPDATE_LAYER'; layerId: string; changes: Partial<MapLayer>; previousChanges: Partial<MapLayer> }
+  | { type: 'REORDER_LAYERS'; newOrder: string[]; previousOrder: string[] }
   | { type: 'BATCH'; actions: MapAction[] };

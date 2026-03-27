@@ -18,6 +18,7 @@ import type {
   TileType,
   Direction,
 } from '../types/map';
+import { useHistoryStore } from './historyStore';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -212,6 +213,9 @@ export const useMapStore = create<MapState>()(
           // Set as current
           state.map = newMap;
           state.currentMapId = newMap.id;
+
+          // Clear undo/redo history for the new map
+          useHistoryStore.getState().clearHistory();
         }),
 
     loadMap: (mapData) =>
@@ -246,6 +250,9 @@ export const useMapStore = create<MapState>()(
             })),
           };
           state.currentMapId = mapId;
+
+          // Clear undo/redo history when switching maps
+          useHistoryStore.getState().clearHistory();
         }
       }),
 

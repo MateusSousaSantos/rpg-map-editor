@@ -1,11 +1,13 @@
 /**
- * useKeyboardShortcuts - Handle keyboard shortcuts for prop manipulation
+ * useKeyboardShortcuts - Handle keyboard shortcuts for prop manipulation and undo/redo
  */
 
 import { useEffect } from 'react';
 import { useMapStore } from '../stores/mapStore';
 import { useUISelectionStore } from '../stores/uiSelectionStore';
 import { useViewportStore } from '../stores/viewportStore';
+import { useHistoryStore } from '../stores/historyStore';
+import type { MapAction } from '../types/map';
 
 export const useKeyboardShortcuts = () => {
   const { selectedPropIds, selectedLayerId, selectionMode, clearSelection } = useUISelectionStore();
@@ -14,13 +16,32 @@ export const useKeyboardShortcuts = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Only handle if props are selected
-      if (selectionMode !== 'props' || selectedPropIds.size === 0 || !selectedLayerId || !map) {
+      // Don't handle if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
 
-      // Don't handle if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      // Undo: Ctrl+Z / Cmd+Z
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        useHistoryStore.getState().undo();
+        return;
+      }
+
+      // Redo: Ctrl+Shift+Z / Cmd+Shift+Z  or  Ctrl+Y / Cmd+Y
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        useHistoryStore.getState().redo();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        useHistoryStore.getState().redo();
+        return;
+      }
+
+      // Only handle prop shortcuts if props are selected
+      if (selectionMode !== 'props' || selectedPropIds.size === 0 || !selectedLayerId || !map) {
         return;
       }
 
@@ -35,6 +56,7 @@ export const useKeyboardShortcuts = () => {
         e.preventDefault();
 
         const moveAmount = e.shiftKey ? 10 : 1;
+        const historyActions: MapAction[] = [];
 
         selectedProps.forEach(prop => {
           let newX = prop.x;
@@ -55,8 +77,24 @@ export const useKeyboardShortcuts = () => {
               break;
           }
 
-          updateProp(selectedLayerId, prop.id, { x: newX, y: newY });
+          const changes = { x: newX, y: newY };
+          const previousChanges = { x: prop.x, y: prop.y };
+
+          updateProp(selectedLayerId, prop.id, changes);
+          historyActions.push({
+            type: 'UPDATE_PROP',
+            layerId: selectedLayerId,
+            propId: prop.id,
+            changes,
+            previousChanges,
+          });
         });
+
+        if (historyActions.length === 1) {
+          useHistoryStore.getState().addAction(historyActions[0]);
+        } else if (historyActions.length > 1) {
+          useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
+        }
       }
 
       // Delete key to remove props
@@ -64,9 +102,24 @@ export const useKeyboardShortcuts = () => {
         e.preventDefault();
 
         if (confirm(`Delete ${selectedProps.length} prop(s)?`)) {
+          const historyActions: MapAction[] = [];
+
           selectedProps.forEach(prop => {
+            historyActions.push({
+              type: 'REMOVE_PROP',
+              layerId: selectedLayerId,
+              propId: prop.id,
+              removedProp: { ...prop },
+            });
             removeProp(selectedLayerId, prop.id);
           });
+
+          if (historyActions.length === 1) {
+            useHistoryStore.getState().addAction(historyActions[0]);
+          } else if (historyActions.length > 1) {
+            useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
+          }
+
           clearSelection();
         }
       }

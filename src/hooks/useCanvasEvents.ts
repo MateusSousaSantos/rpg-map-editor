@@ -4,7 +4,8 @@ import { useMapStore } from '../stores/mapStore';
 import { useToolStore } from '../stores/toolStore';
 import { useUISelectionStore } from '../stores/uiSelectionStore';
 import { useViewportStore } from '../stores/viewportStore';
-import type { TileInstance, TileType } from '../types/map';
+import { useHistoryStore } from '../stores/historyStore';
+import type { TileInstance, TileType, MapAction } from '../types/map';
 import { createProp, getNextZIndex, findPropsAtPosition } from '../utils/props';
 
 interface CanvasEventsParams {
@@ -37,6 +38,9 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
   // Track box paint start position
   const boxStartRef = useRef<{ x: number; y: number } | null>(null);
   const [boxPreview, setBoxPreview] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
+
+  // Accumulate history actions during a brush/eraser drag stroke
+  const strokeActionsRef = useRef<MapAction[]>([]);
 
   /**
    * Convert stage coordinates to grid coordinates
@@ -93,14 +97,16 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       return;
     }
 
-    // Remove existing tile of the same type if it exists
+    // Remove existing tile of the same type if it exists (capture for history)
     if (existingTile) {
+      strokeActionsRef.current.push({ type: 'REMOVE_TILE', layerId: layer.id, tileId: existingTile.id, removedTile: { ...existingTile } });
       removeTile(layer.id, existingTile.id);
     }
 
     // Also remove any overflow tile occupying this cell (placed by a neighboring parent tile)
     const existingOverflow = getTileAt(layer.id, gridX, gridY, 'overflow');
     if (existingOverflow) {
+      strokeActionsRef.current.push({ type: 'REMOVE_TILE', layerId: layer.id, tileId: existingOverflow.id, removedTile: { ...existingOverflow } });
       removeTile(layer.id, existingOverflow.id);
     }
 
@@ -114,6 +120,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     };
 
     addTile(layer.id, newTile);
+    strokeActionsRef.current.push({ type: 'ADD_TILE', layerId: layer.id, tile: { ...newTile } });
   }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTileAt, addTile, removeTile]);
 
   /**
@@ -134,6 +141,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     tileTypes.forEach((type) => {
       const tile = getTileAt(layer.id, gridX, gridY, type);
       if (tile) {
+        strokeActionsRef.current.push({ type: 'REMOVE_TILE', layerId: layer.id, tileId: tile.id, removedTile: { ...tile } });
         removeTile(layer.id, tile.id);
       }
     });
@@ -160,6 +168,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     // Collect all tiles to add
     const tilesToAdd: TileInstance[] = [];
     const tileIdsToRemove: string[] = [];
+    const historyActions: MapAction[] = [];
 
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
@@ -168,22 +177,17 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         // Check if tile already exists at this position for this type
         const existingTile = getTileAt(layer.id, x, y, selectedTileGridType as TileType);
 
-        // Skip if same tile already exists
-        // if (existingTile &&
-        //     existingTile.definitionId === selectedTileDefinitionId &&
-        //     existingTile.type === selectedTileGridType) {
-        //   continue;
-        // }
-
-        // Mark existing tile for removal
+        // Mark existing tile for removal (capture for history)
         if (existingTile) {
           tileIdsToRemove.push(existingTile.id);
+          historyActions.push({ type: 'REMOVE_TILE', layerId: layer.id, tileId: existingTile.id, removedTile: { ...existingTile } });
         }
 
         // Also remove any overflow tile occupying this cell
         const existingOverflow = getTileAt(layer.id, x, y, 'overflow');
         if (existingOverflow) {
           tileIdsToRemove.push(existingOverflow.id);
+          historyActions.push({ type: 'REMOVE_TILE', layerId: layer.id, tileId: existingOverflow.id, removedTile: { ...existingOverflow } });
         }
 
         // Create new tile
@@ -196,6 +200,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         };
 
         tilesToAdd.push(newTile);
+        historyActions.push({ type: 'ADD_TILE', layerId: layer.id, tile: { ...newTile } });
       }
     }
 
@@ -205,6 +210,11 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     }
     if (tilesToAdd.length > 0) {
       useMapStore.getState().batchAddTiles(layer.id, tilesToAdd);
+    }
+
+    // Record as single history action
+    if (historyActions.length > 0) {
+      useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
     }
   }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTileAt]);
 
@@ -227,6 +237,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     const maxY = Math.max(startY, endY);
 
     const tileIdsToRemove: string[] = [];
+    const historyActions: MapAction[] = [];
     const tileTypes: TileType[] = ['terrain', 'overlay', 'wall', 'overflow'];
 
     for (let y = minY; y <= maxY; y++) {
@@ -234,13 +245,21 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         if (!isInBounds(x, y)) continue;
         tileTypes.forEach((type) => {
           const tile = getTileAt(layer.id, x, y, type);
-          if (tile) tileIdsToRemove.push(tile.id);
+          if (tile) {
+            tileIdsToRemove.push(tile.id);
+            historyActions.push({ type: 'REMOVE_TILE', layerId: layer.id, tileId: tile.id, removedTile: { ...tile } });
+          }
         });
       }
     }
 
     if (tileIdsToRemove.length > 0) {
       useMapStore.getState().batchRemoveTiles(layer.id, tileIdsToRemove);
+    }
+
+    // Record as single history action
+    if (historyActions.length > 0) {
+      useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
     }
   }, [map, selectedLayerId, isInBounds, getTileAt]);
 
@@ -322,6 +341,9 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
 
     // Add to map
     addProp(layer.id, newProp);
+
+    // Record history
+    useHistoryStore.getState().addAction({ type: 'ADD_PROP', layerId: layer.id, prop: { ...newProp } });
 
     // Select the newly placed prop
     selectProps([newProp.id]);
@@ -436,6 +458,17 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       }
     }
 
+    // Flush accumulated stroke actions as a single history entry
+    if (strokeActionsRef.current.length > 0) {
+      const actions = strokeActionsRef.current;
+      strokeActionsRef.current = [];
+      if (actions.length === 1) {
+        useHistoryStore.getState().addAction(actions[0]);
+      } else {
+        useHistoryStore.getState().addAction({ type: 'BATCH', actions });
+      }
+    }
+
     isDrawingRef.current = false;
     lastDrawnTileRef.current = null;
     boxStartRef.current = null;
@@ -537,6 +570,17 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
             handleBoxPaintTool(boxStartRef.current.x, boxStartRef.current.y, gridX, gridY);
           }
         }
+      }
+    }
+
+    // Flush accumulated stroke actions as a single history entry
+    if (strokeActionsRef.current.length > 0) {
+      const actions = strokeActionsRef.current;
+      strokeActionsRef.current = [];
+      if (actions.length === 1) {
+        useHistoryStore.getState().addAction(actions[0]);
+      } else {
+        useHistoryStore.getState().addAction({ type: 'BATCH', actions });
       }
     }
 
