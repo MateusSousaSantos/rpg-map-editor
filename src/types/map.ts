@@ -14,6 +14,8 @@ export interface BaseTileDefinition {
   type: TileType;
   textureUrl: string;      // path to sprite
   tileSize: number;        // 16, 32, 64, etc. - can change globally
+  group?: string;          // visual group label in the sidebar (e.g., 'Grass', 'Water')
+  groupColor?: string;     // hex color for the group swatch (e.g., '#4ade80')
 
   // Overflow tiles by direction - auto-placed when this tile is placed
   // Maps direction to overflow tile definition ID
@@ -104,6 +106,8 @@ export interface PropDefinition {
   width: number;              // world width in pixels
   height: number;             // world height in pixels
   tags: string[];             // "outdoor", "wooden", "interactive", etc.
+  group?: string;             // visual sub-group label in the sidebar (e.g., 'Oak', 'Pine')
+  groupColor?: string;        // hex color for the group swatch (e.g., '#4ade80')
 
   // Default appearance
   defaultOpacity?: number;

@@ -32,6 +32,47 @@ const TileItem = ({ tile, isSelected, onSelect }: TileItemProps) => {
   );
 };
 
+interface TileGroupBoxProps {
+  label: string;
+  color?: string;
+  tiles: BaseTileDefinition[];
+  selectedTileId: string | null;
+  onSelectTile: (tileId: string, gridType: TileType) => void;
+  onDeleteTile: (tileId: string) => void;
+}
+
+const TileGroupBox = ({
+  label,
+  color,
+  tiles,
+  selectedTileId,
+  onSelectTile,
+  onDeleteTile,
+}: TileGroupBoxProps) => (
+  <div className="border border-slate-700 rounded p-2 space-y-1.5">
+    <div className="flex items-center gap-1.5">
+      {color && (
+        <span
+          className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+          style={{ backgroundColor: color }}
+        />
+      )}
+      <p className="text-xs text-slate-400 font-medium">{label}</p>
+    </div>
+    <div className="flex flex-row flex-wrap gap-2">
+      {tiles.map((tile) => (
+        <TileItem
+          key={tile.id}
+          tile={tile}
+          isSelected={tile.id === selectedTileId}
+          onSelect={onSelectTile}
+          onDelete={onDeleteTile}
+        />
+      ))}
+    </div>
+  </div>
+);
+
 interface TileCategoryProps {
   title: string;
   type: TileType;
@@ -50,6 +91,25 @@ const TileCategory = ({
 }: TileCategoryProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
 
+  // Hide overflow tiles — they are placed automatically, not selected manually
+  const visibleTiles = tiles.filter((t) => t.type !== "overflow");
+
+  // Separate grouped tiles from ungrouped tiles
+  const groupMap = new Map<string, { tiles: BaseTileDefinition[]; color?: string }>();
+  const ungrouped: BaseTileDefinition[] = [];
+  for (const tile of visibleTiles) {
+    if (tile.group) {
+      const existing = groupMap.get(tile.group);
+      if (existing) {
+        existing.tiles.push(tile);
+      } else {
+        groupMap.set(tile.group, { tiles: [tile], color: tile.groupColor });
+      }
+    } else {
+      ungrouped.push(tile);
+    }
+  }
+
   return (
     <div className="space-y-2">
       {/* Category Header */}
@@ -58,7 +118,7 @@ const TileCategory = ({
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <button className="flex-1 text-left text-sm font-semibold text-slate-200 hover:text-slate-100 transition-colors">
-          {title} ({tiles.length})
+          {title} ({visibleTiles.length})
         </button>
         <FaChevronDown
           size={14}
@@ -68,22 +128,37 @@ const TileCategory = ({
         />
       </div>
 
-      {/* Tiles Grid */}
+      {/* Tiles — grouped boxes + ungrouped flat */}
       <div
-        className={`flex flex-row flex-wrap gap-2 overflow-hidden transition-all duration-300 ease-in-out ${
+        className={`space-y-2 overflow-hidden transition-all duration-300 ease-in-out ${
           isExpanded ? "max-h-250 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        {tiles.map((tile) => (
-          <TileItem
-            key={tile.id}
-            tile={tile}
-            isSelected={tile.id === selectedTileId}
-            onSelect={onSelectTile}
-            onDelete={onDeleteTile}
+        {Array.from(groupMap.entries()).map(([groupLabel, { tiles: groupTiles, color }]) => (
+          <TileGroupBox
+            key={groupLabel}
+            label={groupLabel}
+            color={color}
+            tiles={groupTiles}
+            selectedTileId={selectedTileId}
+            onSelectTile={onSelectTile}
+            onDeleteTile={onDeleteTile}
           />
         ))}
-        {tiles.length === 0 && (
+        {ungrouped.length > 0 && (
+          <div className="flex flex-row flex-wrap gap-2">
+            {ungrouped.map((tile) => (
+              <TileItem
+                key={tile.id}
+                tile={tile}
+                isSelected={tile.id === selectedTileId}
+                onSelect={onSelectTile}
+                onDelete={onDeleteTile}
+              />
+            ))}
+          </div>
+        )}
+        {visibleTiles.length === 0 && (
           <div className="col-span-3 text-xs text-slate-500 text-center py-4">
             No {title.toLowerCase()} tiles yet
           </div>
