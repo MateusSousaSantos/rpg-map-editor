@@ -4,6 +4,8 @@
 
 import type { PropInstance, PropDefinition } from '../types/map';
 
+const DUPLICATE_PROP_OFFSET = 16;
+
 /**
  * Create a new prop instance from a definition
  */
@@ -26,6 +28,25 @@ export const createProp = (
     opacity: definition.defaultOpacity ?? 1,
     zIndex: maxZIndex + 1,
     visible: true,
+  };
+};
+
+/**
+ * Duplicate an existing prop instance with a fresh ID and z-index.
+ */
+export const duplicateProp = (
+  prop: PropInstance,
+  maxZIndex: number = 0,
+  offsetX: number = DUPLICATE_PROP_OFFSET,
+  offsetY: number = DUPLICATE_PROP_OFFSET
+): PropInstance => {
+  return {
+    ...prop,
+    id: crypto.randomUUID(),
+    x: prop.x + offsetX,
+    y: prop.y + offsetY,
+    zIndex: maxZIndex + 1,
+    properties: prop.properties ? structuredClone(prop.properties) : undefined,
   };
 };
 

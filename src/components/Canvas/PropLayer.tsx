@@ -16,6 +16,7 @@ import type { MapLayer, PropInstance } from '../../types/map';
 import { useMapStore } from '../../stores/mapStore';
 import { useHistoryStore } from '../../stores/historyStore';
 import Konva from 'konva';
+import { duplicateProp, getNextZIndex } from '../../utils/props';
 
 interface PropLayerProps {
   layer: MapLayer;
@@ -99,12 +100,15 @@ interface PropGroupProps {
 
 const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: PropGroupProps) => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
-  const { selectProps, togglePropSelection } = useUISelectionStore();
+  const { selectLayer, selectProps, togglePropSelection } = useUISelectionStore();
   const selectedPropIds = useUISelectionStore((state) => state.selectedPropIds);
   const propDefinitions = useMapStore((state) => state.map?.propDefinitions || []);
   const updateProp = useMapStore((state) => state.updateProp);
+  const layerProps = useMapStore((state) => state.map?.layers.find((layer) => layer.id === layerId)?.props || []);
+  const addProp = useMapStore((state) => state.addProp);
   const { getTexture, loadTexture } = useTextureCache();
   const groupRef = useRef<Konva.Group>(null);
+  const suppressClickRef = useRef(false);
 
   // Get prop definition
   const definition = propDefinitions.find(def => def.id === prop.definitionId);
@@ -137,9 +141,39 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
       });
   }, [definition, getTexture, loadTexture]);
 
+  const duplicateSelectedProp = () => {
+    const duplicatedProp = duplicateProp(prop, getNextZIndex(layerProps));
+
+    addProp(layerId, duplicatedProp);
+    useHistoryStore.getState().addAction({
+      type: 'ADD_PROP',
+      layerId,
+      prop: { ...duplicatedProp },
+    });
+    selectLayer(layerId);
+    selectProps([duplicatedProp.id]);
+  };
+
+  const handleMouseDown = (e: any) => {
+    const isDuplicateShortcut = e.evt.altKey && (e.evt.ctrlKey || e.evt.metaKey);
+    if (!isDuplicateShortcut) {
+      return;
+    }
+
+    e.evt.preventDefault();
+    e.cancelBubble = true;
+    suppressClickRef.current = true;
+    duplicateSelectedProp();
+  };
+
   // Handle click on prop
   const handleClick = (e: any) => {
     e.cancelBubble = true; // Stop event from propagating to stage
+
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
 
     const isMultiSelect = e.evt.ctrlKey || e.evt.metaKey;
     const isSelected = selectedPropIds.has(prop.id);
@@ -243,6 +277,7 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
       scaleY={prop.scaleY}
       opacity={prop.opacity * layerOpacity}
       draggable={!prop.locked}
+      onMouseDown={handleMouseDown}
       onClick={handleClick}
       onTap={handleClick}
       onDragEnd={handleDragEnd}
