@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useMapStore } from "../../stores/mapStore";
 import { useToolStore } from "../../stores/toolStore";
 import { useUISelectionStore } from "../../stores/uiSelectionStore";
-import { FiTrash2, FiEye, FiEyeOff, FiLock, FiUnlock } from "react-icons/fi";
+import { FiTrash2, FiEye, FiEyeOff, FiLock, FiUnlock, FiPlus } from "react-icons/fi";
 import { FaChevronDown, FaChevronLeft } from "react-icons/fa";
+import { AddPropModal } from "../AddPropModal/AddPropModal";
 
 import type { PropDefinition } from "../../types/map";
 
@@ -32,6 +33,7 @@ interface PropItemProps {
   onDragStart: (e: React.DragEvent, propDefId: string) => void;
   onDragEnd: () => void;
   onSelect: (propDefId: string) => void;
+  onRemove: (defId: string) => void;
 }
 
 const PropItem = ({
@@ -41,13 +43,14 @@ const PropItem = ({
   onDragStart,
   onDragEnd,
   onSelect,
+  onRemove,
 }: PropItemProps) => (
   <div
     draggable
     onDragStart={(e) => onDragStart(e, def.id)}
     onDragEnd={onDragEnd}
     onClick={() => onSelect(def.id)}
-    className={`relative rounded cursor-grab active:cursor-grabbing transition-all ${
+    className={`group relative rounded cursor-grab active:cursor-grabbing transition-all ${
       selectedPropId === def.id
         ? "ring-2 ring-prop border border-prop/50 bg-prop/10"
         : draggedPropId === def.id
@@ -64,6 +67,18 @@ const PropItem = ({
         style={{ imageRendering: "pixelated" }}
       />
     </div>
+    {/* Remove button — visible on hover */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onRemove(def.id);
+      }}
+      className="absolute top-0.5 right-0.5 z-10 rounded p-0.5 bg-panel/80 text-ink-muted opacity-0 group-hover:opacity-100 hover:bg-danger/20 hover:text-danger transition-all"
+      title={`Remove "${def.name}" from library`}
+      aria-label={`Remove ${def.name}`}
+    >
+      <FiTrash2 size={10} />
+    </button>
   </div>
 );
 
@@ -75,6 +90,7 @@ interface PropCategoryProps {
   onDragStart: (e: React.DragEvent, propDefId: string) => void;
   onDragEnd: () => void;
   onSelect: (propDefId: string) => void;
+  onRemove: (defId: string) => void;
 }
 
 const PropCategory = ({
@@ -85,6 +101,7 @@ const PropCategory = ({
   onDragStart,
   onDragEnd,
   onSelect,
+  onRemove,
 }: PropCategoryProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -139,6 +156,7 @@ const PropCategory = ({
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
               onSelect={onSelect}
+              onRemove={onRemove}
             />
           ))}
           {groupProps.length === 0 && (
@@ -194,6 +212,7 @@ const PropCategory = ({
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 onSelect={onSelect}
+                onRemove={onRemove}
               />
             ))}
           </div>
@@ -212,10 +231,12 @@ export const PropsTab = () => {
   const { selectedPropIds, selectedLayerId, selectionMode } = useUISelectionStore();
   const updateProp = useMapStore((state) => state.updateProp);
   const removeProp = useMapStore((state) => state.removeProp);
+  const removePropDefinition = useMapStore((state) => state.removePropDefinition);
 
   const [draggedPropId, setDraggedPropId] = useState<string | null>(null);
   const [isLibraryExpanded, setIsLibraryExpanded] = useState(true);
   const [isPropertiesExpanded, setIsPropertiesExpanded] = useState(true);
+  const [isAddPropModalOpen, setIsAddPropModalOpen] = useState(false);
 
   if (!map) return null;
 
@@ -269,12 +290,25 @@ export const PropsTab = () => {
               ({map.propDefinitions.length})
             </span>
           </span>
-          <FaChevronDown
-            size={12}
-            className={`text-ink-muted transition-transform ${
-              isLibraryExpanded ? "rotate-0" : "-rotate-180"
-            }`}
-          />
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsAddPropModalOpen(true);
+              }}
+              className="rounded p-0.5 text-ink-muted hover:bg-raised hover:text-prop transition-colors"
+              title="Add custom prop"
+              aria-label="Add custom prop"
+            >
+              <FiPlus size={14} />
+            </button>
+            <FaChevronDown
+              size={12}
+              className={`text-ink-muted transition-transform ${
+                isLibraryExpanded ? "rotate-0" : "-rotate-180"
+              }`}
+            />
+          </div>
         </div>
 
         <div
@@ -296,6 +330,7 @@ export const PropsTab = () => {
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   onSelect={setSelectedPropDefinition}
+                  onRemove={removePropDefinition}
                 />
               ))}
               {uncategorizedProps.length > 0 && (
@@ -307,6 +342,7 @@ export const PropsTab = () => {
                   onDragStart={handleDragStart}
                   onDragEnd={handleDragEnd}
                   onSelect={setSelectedPropDefinition}
+                  onRemove={removePropDefinition}
                 />
               )}
             </div>
@@ -500,6 +536,11 @@ export const PropsTab = () => {
           <p className="text-xs text-ink-muted mt-1">{selectedPropIds.size} props selected</p>
         </div>
       )}
+
+      <AddPropModal
+        isOpen={isAddPropModalOpen}
+        onClose={() => setIsAddPropModalOpen(false)}
+      />
     </div>
   );
 };
