@@ -7,6 +7,7 @@ import { useMapStore } from '../stores/mapStore';
 import { useUISelectionStore } from '../stores/uiSelectionStore';
 import { useViewportStore } from '../stores/viewportStore';
 import { useHistoryStore } from '../stores/historyStore';
+import { useToolStore } from '../stores/toolStore';
 import type { MapAction } from '../types/map';
 
 export const useKeyboardShortcuts = () => {
@@ -143,6 +144,11 @@ export const useKeyboardShortcuts = () => {
       if (e.key === 'Home') {
         e.preventDefault();
         resetViewport();
+      }
+      if ((e.key === 'r' || e.key === 'R') && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const store = useToolStore.getState();
+        store.setRandomBrushEnabled(!store.randomBrushEnabled);
       }
     };
 

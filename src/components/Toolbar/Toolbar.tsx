@@ -1,13 +1,13 @@
 import { useToolStore } from "../../stores/toolStore";
 import { useHistoryStore } from "../../stores/historyStore";
-import { FiEdit2, FiTrash2, FiSquare, FiDownload, FiRotateCcw, FiRotateCw } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiSquare, FiDownload, FiRotateCcw, FiRotateCw, FiShuffle } from "react-icons/fi";
 
 interface ToolbarProps {
   onExportClick: () => void;
 }
 
 export const Toolbar = ({ onExportClick }: ToolbarProps) => {
-  const { activeTool, boxMode, setActiveTool } = useToolStore();
+  const { activeTool, boxMode, setActiveTool, randomBrushEnabled, setRandomBrushEnabled, selectedTileDefinitionId } = useToolStore();
   const { undo, redo, canUndo, canRedo } = useHistoryStore();
 
   return (
@@ -61,10 +61,23 @@ export const Toolbar = ({ onExportClick }: ToolbarProps) => {
         )}
       </button>
 
+      {/* Random Brush Toggle */}
+      <button
+        onClick={() => setRandomBrushEnabled(!randomBrushEnabled)}
+        disabled={activeTool === 'eraser' || !selectedTileDefinitionId}
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors disabled:opacity-30 disabled:pointer-events-none ${
+          randomBrushEnabled && selectedTileDefinitionId
+            ? "bg-accent text-white"
+            : "text-ink-muted hover:text-ink hover:bg-raised"
+        }`}
+        title="Random Brush (R) — picks a random variant from the selected tile's group"
+      >
+        <FiShuffle size={16} />
+        <span className="text-xs font-medium">Random</span>
+      </button>
+
       {/* Divider */}
       <div className="w-px h-5 bg-edge mx-1" />
-
-      {/* Undo */}
       <button
         onClick={undo}
         disabled={!canUndo()}

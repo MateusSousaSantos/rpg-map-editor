@@ -9,27 +9,54 @@ interface TileItemProps {
   isSelected: boolean;
   onSelect: (tileId: string, gridType: TileType) => void;
   onDelete: (tileId: string) => void;
+  showWeightControls?: boolean;
+  weight?: number;
+  weightPercent?: number;
+  onWeightIncrease?: () => void;
+  onWeightDecrease?: () => void;
 }
 
-const TileItem = ({ tile, isSelected, onSelect }: TileItemProps) => {
+const TileItem = ({ tile, isSelected, onSelect, showWeightControls, weight = 1, weightPercent = 0, onWeightIncrease, onWeightDecrease }: TileItemProps) => {
   return (
-    <div
-      className={`rounded cursor-pointer transition-all ${
-        isSelected
-          ? "ring-2 ring-tile-sel border border-tile-sel/50"
-          : "border border-edge hover:border-edge-strong"
-      }`}
-      onClick={() => onSelect(tile.id, tile.type)}
-      title={tile.name}
-    >
-      <div className="relative w-14 h-14 bg-canvas rounded overflow-hidden">
-        <img
-          src={tile.textureUrl}
-          alt={tile.name}
-          className="w-full h-full object-cover"
-          style={{ imageRendering: "pixelated" }}
-        />
+    <div className="flex flex-col items-center gap-1">
+      <div
+        className={`rounded cursor-pointer transition-all ${
+          isSelected
+            ? "ring-2 ring-tile-sel border border-tile-sel/50"
+            : "border border-edge hover:border-edge-strong"
+        }`}
+        onClick={() => onSelect(tile.id, tile.type)}
+        title={tile.name}
+      >
+        <div className="relative w-14 h-14 bg-canvas rounded overflow-hidden">
+          <img
+            src={tile.textureUrl}
+            alt={tile.name}
+            className="w-full h-full object-cover"
+            style={{ imageRendering: "pixelated" }}
+          />
+          {showWeightControls && (
+            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-center text-[10px] py-0.5 font-semibold leading-tight">
+              {weightPercent}%
+            </div>
+          )}
+        </div>
       </div>
+      {showWeightControls && (
+        <div className="flex items-center gap-0.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); onWeightDecrease?.(); }}
+            className="w-5 h-5 flex items-center justify-center rounded bg-raised hover:bg-edge text-ink-muted hover:text-ink text-sm transition-colors"
+            title="Decrease weight"
+          >−</button>
+          <span className="text-[10px] text-ink-muted w-5 text-center">{weight}</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onWeightIncrease?.(); }}
+            className="w-5 h-5 flex items-center justify-center rounded bg-raised hover:bg-edge text-ink-muted hover:text-ink text-sm transition-colors"
+            title="Increase weight"
+          >+</button>
+        </div>
+      )}
     </div>
   );
 };
@@ -66,6 +93,9 @@ interface TileCategoryProps {
   selectedTileId: string | null;
   onSelectTile: (tileId: string, gridType: TileType) => void;
   onDeleteTile: (tileId: string) => void;
+  randomBrushEnabled: boolean;
+  variantWeights: Record<string, Record<string, number>>;
+  onSetVariantWeight: (group: string, definitionId: string, weight: number) => void;
 }
 
 const TileCategory = ({
@@ -74,6 +104,9 @@ const TileCategory = ({
   selectedTileId,
   onSelectTile,
   onDeleteTile,
+  randomBrushEnabled,
+  variantWeights,
+  onSetVariantWeight,
 }: TileCategoryProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -104,6 +137,11 @@ const TileCategory = ({
   if (selectedGroup) {
     const groupData = groupMap.get(selectedGroup);
     const groupTiles = groupData?.tiles ?? [];
+
+    // Compute normalised percentages for weight display
+    const groupWeights = variantWeights[selectedGroup] ?? {};
+    const totalWeight = groupTiles.reduce((sum, t) => sum + Math.max(0, groupWeights[t.id] ?? 1), 0);
+
     return (
       <div className="space-y-2">
         {/* Group header with back button */}
@@ -127,15 +165,24 @@ const TileCategory = ({
         </div>
         {/* Tiles in this group */}
         <div className="flex flex-row flex-wrap gap-2">
-          {groupTiles.map((tile) => (
-            <TileItem
-              key={tile.id}
-              tile={tile}
-              isSelected={tile.id === selectedTileId}
-              onSelect={onSelectTile}
-              onDelete={onDeleteTile}
-            />
-          ))}
+          {groupTiles.map((tile) => {
+            const rawWeight = groupWeights[tile.id] ?? 1;
+            const pct = totalWeight > 0 ? Math.round((rawWeight / totalWeight) * 100) : 0;
+            return (
+              <TileItem
+                key={tile.id}
+                tile={tile}
+                isSelected={tile.id === selectedTileId}
+                onSelect={onSelectTile}
+                onDelete={onDeleteTile}
+                showWeightControls={randomBrushEnabled}
+                weight={rawWeight}
+                weightPercent={pct}
+                onWeightIncrease={() => onSetVariantWeight(selectedGroup, tile.id, rawWeight + 1)}
+                onWeightDecrease={() => onSetVariantWeight(selectedGroup, tile.id, Math.max(0, rawWeight - 1))}
+              />
+            );
+          })}
           {groupTiles.length === 0 && (
             <p className="text-xs text-ink-muted py-2">
               No tiles in this group
@@ -215,6 +262,9 @@ export const TilesTab = () => {
     selectedTileGridType,
     setSelectedTileDefinition,
     setActiveTool,
+    randomBrushEnabled,
+    variantWeights,
+    setVariantWeight,
   } = useToolStore();
 
   if (!map) return null;
@@ -261,6 +311,9 @@ export const TilesTab = () => {
         selectedTileId={currentSelectedTileId}
         onSelectTile={handleSelectTile}
         onDeleteTile={handleDeleteTile}
+        randomBrushEnabled={randomBrushEnabled}
+        variantWeights={variantWeights}
+        onSetVariantWeight={setVariantWeight}
       />
       <TileCategory
         title="Walls"
@@ -269,6 +322,9 @@ export const TilesTab = () => {
         selectedTileId={currentSelectedTileId}
         onSelectTile={handleSelectTile}
         onDeleteTile={handleDeleteTile}
+        randomBrushEnabled={randomBrushEnabled}
+        variantWeights={variantWeights}
+        onSetVariantWeight={setVariantWeight}
       />
     </div>
   );

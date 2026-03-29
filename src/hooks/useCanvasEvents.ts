@@ -7,6 +7,7 @@ import { useViewportStore } from '../stores/viewportStore';
 import { useHistoryStore } from '../stores/historyStore';
 import type { TileInstance, TileType, MapAction } from '../types/map';
 import { createProp, getNextZIndex, findPropsAtPosition } from '../utils/props';
+import { pickRandomVariant } from '../utils/tilesdefinition';
 
 interface CanvasEventsParams {
   tileSize: number;
@@ -87,13 +88,31 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       : map.layers[0];
     if (!layer || layer.locked) return;
 
+    // Resolve variant (may be a random pick from the selected tile's group)
+    const { randomBrushEnabled, variantWeights } = useToolStore.getState();
+    let resolvedDefId = selectedTileDefinitionId;
+    let resolvedType = selectedTileGridType as TileType;
+
+    if (randomBrushEnabled) {
+      const selectedDef = map.tileDefinitions.find((d) => d.id === selectedTileDefinitionId);
+      if (selectedDef?.group) {
+        const groupDefs = map.tileDefinitions.filter((d) => d.group === selectedDef.group && d.type !== 'overflow');
+        if (groupDefs.length > 1) {
+          const weights = variantWeights[selectedDef.group] ?? {};
+          resolvedDefId = pickRandomVariant(groupDefs, weights);
+          const resolvedDef = groupDefs.find((d) => d.id === resolvedDefId);
+          if (resolvedDef) resolvedType = resolvedDef.type;
+        }
+      }
+    }
+
     // Check if tile already exists at this position for this type
-    const existingTile = getTileAt(layer.id, gridX, gridY, selectedTileGridType as TileType);
+    const existingTile = getTileAt(layer.id, gridX, gridY, resolvedType);
 
     // Don't place if same tile already exists
     if (existingTile &&
-        existingTile.definitionId === selectedTileDefinitionId &&
-        existingTile.type === selectedTileGridType) {
+        existingTile.definitionId === resolvedDefId &&
+        existingTile.type === resolvedType) {
       return;
     }
 
@@ -113,10 +132,10 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     // Create new tile
     const newTile: TileInstance = {
       id: crypto.randomUUID(),
-      definitionId: selectedTileDefinitionId,
+      definitionId: resolvedDefId,
       gridX,
       gridY,
-      type: selectedTileGridType,
+      type: resolvedType,
     };
 
     addTile(layer.id, newTile);
@@ -170,12 +189,36 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     const tileIdsToRemove: string[] = [];
     const historyActions: MapAction[] = [];
 
+    // Pre-compute group data for random variant selection (shared across all cells)
+    const { randomBrushEnabled, variantWeights } = useToolStore.getState();
+    let randomGroupDefs: typeof map.tileDefinitions | null = null;
+    let randomGroupWeights: Record<string, number> = {};
+    if (randomBrushEnabled) {
+      const selectedDef = map.tileDefinitions.find((d) => d.id === selectedTileDefinitionId);
+      if (selectedDef?.group) {
+        const candidates = map.tileDefinitions.filter((d) => d.group === selectedDef.group && d.type !== 'overflow');
+        if (candidates.length > 1) {
+          randomGroupDefs = candidates;
+          randomGroupWeights = variantWeights[selectedDef.group] ?? {};
+        }
+      }
+    }
+
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         if (!isInBounds(x, y)) continue;
 
+        // Resolve variant independently per cell (each cell gets its own random roll)
+        let resolvedDefId = selectedTileDefinitionId;
+        let resolvedType = selectedTileGridType as TileType;
+        if (randomGroupDefs) {
+          resolvedDefId = pickRandomVariant(randomGroupDefs, randomGroupWeights);
+          const resolvedDef = randomGroupDefs.find((d) => d.id === resolvedDefId);
+          if (resolvedDef) resolvedType = resolvedDef.type;
+        }
+
         // Check if tile already exists at this position for this type
-        const existingTile = getTileAt(layer.id, x, y, selectedTileGridType as TileType);
+        const existingTile = getTileAt(layer.id, x, y, resolvedType);
 
         // Mark existing tile for removal (capture for history)
         if (existingTile) {
@@ -193,10 +236,10 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         // Create new tile
         const newTile: TileInstance = {
           id: crypto.randomUUID(),
-          definitionId: selectedTileDefinitionId,
+          definitionId: resolvedDefId,
           gridX: x,
           gridY: y,
-          type: selectedTileGridType,
+          type: resolvedType,
         };
 
         tilesToAdd.push(newTile);

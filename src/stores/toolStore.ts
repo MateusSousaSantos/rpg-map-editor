@@ -20,11 +20,17 @@ interface ToolState {
   // Tool settings
   brushSize: number; // for future multi-tile brush
 
+  // Random brush
+  randomBrushEnabled: boolean;
+  variantWeights: Record<string, Record<string, number>>;
+
   // Actions
   setActiveTool: (tool: ToolType) => void;
   setSelectedTileDefinition: (defId: string, gridType: TileType) => void;
   setSelectedPropDefinition: (defId: string) => void;
   setBrushSize: (size: number) => void;
+  setRandomBrushEnabled: (enabled: boolean) => void;
+  setVariantWeight: (group: string, definitionId: string, weight: number) => void;
   clearToolSelection: () => void;
 }
 
@@ -35,6 +41,8 @@ export const useToolStore = create<ToolState>((set) => ({
   selectedTileGridType: null,
   selectedPropDefinitionId: null,
   brushSize: 1,
+  randomBrushEnabled: false,
+  variantWeights: {},
 
   setActiveTool: (tool) =>
     set(() => ({
@@ -66,5 +74,21 @@ export const useToolStore = create<ToolState>((set) => ({
       selectedTileDefinitionId: null,
       selectedTileGridType: null,
       selectedPropDefinitionId: null,
+    })),
+
+  setRandomBrushEnabled: (enabled) =>
+    set(() => ({
+      randomBrushEnabled: enabled,
+    })),
+
+  setVariantWeight: (group, definitionId, weight) =>
+    set((state) => ({
+      variantWeights: {
+        ...state.variantWeights,
+        [group]: {
+          ...(state.variantWeights[group] ?? {}),
+          [definitionId]: Math.max(0, weight),
+        },
+      },
     })),
 }));
