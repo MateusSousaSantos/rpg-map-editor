@@ -66,7 +66,7 @@ function Vault() {
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
-    createMap(formData.name, formData.width, formData.height, 16);
+    createMap(formData.name, formData.width, formData.height, 32);
     const { addTileDefinition, addPropDefinition } = useMapStore.getState();
     initializeAssets(addTileDefinition, addPropDefinition);
     navigate("/app");
