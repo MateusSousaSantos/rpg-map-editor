@@ -48,12 +48,13 @@ const TileGroupBox = ({
   onClick,
 }: TileGroupBoxProps) => (
   <div
-    className="w-5/11 aspect-square rounded border-2 border-slate-500 p-2 m-0 flex flex-col justify-end items-start gap-2 cursor-pointer hover:border-tile-sel transition-colors"
+    className="w-5/11 aspect-square rounded border-2 border-slate-500 m-0 flex flex-col cursor-pointer hover:border-tile-sel transition-colors"
     style={color ? { background: `linear-gradient(45deg, ${color}50, transparent)` } : undefined}
     onClick={onClick}
   >
-    <div className="flex flex-row items-center gap-1">
+    <div className="w-full p-1 flex items-center justify-around">
       <h1 className="text-xl font-semibold text-ink-secondary">{label}</h1>
+      <p className="text-xs text-ink-muted">{tileCount} tiles</p>
     </div>
   </div>
 );
