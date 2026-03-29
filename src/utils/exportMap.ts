@@ -1,4 +1,4 @@
-import type { BaseTileDefinition, OverlayTileDefinition, TileInstance } from '../types/map';
+import type { BaseTileDefinition, OverlayTileDefinition, PropDefinition, PropInstance, TileInstance } from '../types/map';
 import { useMapStore } from '../stores/mapStore';
 import { useTextureCache } from '../stores/textureCache';
 import { isAutotileEnabled, computeBlobBitmask, resolveAutotileTexturePath } from './autotiling';
@@ -31,6 +31,12 @@ export async function exportMap(
     tileDefinitions.set(def.id, def);
   }
 
+  // ─── Build propDefinitions lookup ────────────────────────────────────────
+  const propDefinitions = new Map<string, PropDefinition>();
+  for (const def of map.propDefinitions) {
+    propDefinitions.set(def.id, def);
+  }
+
   // ─── Resolve every texture URL we'll need before drawing ─────────────────
   const urlsToLoad = new Set<string>();
 
@@ -53,6 +59,13 @@ export async function exportMap(
         );
         urlsToLoad.add(resolveAutotileTexturePath(def, bitmask));
       }
+    }
+
+    // Collect prop texture URLs
+    for (const prop of layer.props) {
+      if (!prop.visible) continue;
+      const def = propDefinitions.get(prop.definitionId);
+      if (def) urlsToLoad.add(def.textureUrl);
     }
   }
 
@@ -103,6 +116,21 @@ export async function exportMap(
       if (!texture || !texture.complete) continue;
 
       drawTile(ctx, tile, def as OverlayTileDefinition, texture, tileSize, scale, layer.opacity);
+    }
+
+    // ─── Render props for this layer (sorted by zIndex) ───────────────────
+    const sortedProps = [...layer.props]
+      .filter(prop => prop.visible)
+      .sort((a, b) => a.zIndex - b.zIndex);
+
+    for (const prop of sortedProps) {
+      const def = propDefinitions.get(prop.definitionId);
+      if (!def) continue;
+
+      const texture = getTexture(def.textureUrl);
+      if (!texture || !texture.complete) continue;
+
+      drawProp(ctx, prop, def, texture, scale, layer.opacity);
     }
   }
 
@@ -206,6 +234,51 @@ export function drawTile(
     ctx.globalCompositeOperation = 'source-over';
   } else {
     ctx.drawImage(texture, x, y, size, size);
+  }
+
+  ctx.restore();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function drawProp(
+  ctx: CanvasRenderingContext2D,
+  prop: PropInstance,
+  def: PropDefinition,
+  texture: HTMLImageElement,
+  scale: number,
+  layerOpacity: number,
+): void {
+  const x = prop.x * scale;
+  const y = prop.y * scale;
+  const w = def.width * prop.scaleX * scale;
+  const h = def.height * prop.scaleY * scale;
+  const opacity = prop.opacity * layerOpacity;
+  const rotation = prop.rotation;
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
+
+  // Translate to the prop's world position (Konva Group origin = top-left)
+  ctx.translate(x, y);
+  if (rotation !== 0) {
+    ctx.rotate((rotation * Math.PI) / 180);
+  }
+
+  if (prop.tint) {
+    const r = parseInt(prop.tint.slice(1, 3), 16);
+    const g = parseInt(prop.tint.slice(3, 5), 16);
+    const b = parseInt(prop.tint.slice(5, 7), 16);
+
+    ctx.drawImage(texture, 0, 0, w, h);
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'destination-in';
+    ctx.drawImage(texture, 0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
+  } else {
+    ctx.drawImage(texture, 0, 0, w, h);
   }
 
   ctx.restore();
