@@ -31,25 +31,6 @@ export const TILE_DEFINITIONS: Record<string, BaseTileDefinition> = {
     textureUrl: "/tilesets/terrain/grass/grass-2.png",
     tileSize: 32,
   },
-  "grass-terrain-3": {
-    id: "grass-terrain-3",
-    name: "Grass",
-    type: "terrain",
-    group: "Grass",
-    groupColor: "#4ade80",
-    textureUrl: "/tilesets/terrain/grass/grass-3.png",
-    tileSize: 32,
-  },
-  "grass-terrain-4": {
-    id: "grass-terrain-4",
-    name: "Grass",
-    type: "terrain",
-    group: "Grass",
-    groupColor: "#4ade80",
-    textureUrl: "/tilesets/terrain/grass/grass-4.png",
-    tileSize: 32,
-  },
-
   "wood-terrain": {
     id: "wood-terrain",
     name: "Wood Floor",
@@ -192,7 +173,7 @@ export const pickRandomVariant = (
   groupDefinitions: BaseTileDefinition[],
   weights: Record<string, number>,
 ): string => {
-  if (groupDefinitions.length === 0) return '';
+  if (groupDefinitions.length === 0) return "";
 
   const entries = groupDefinitions.map((def) => ({
     id: def.id,
