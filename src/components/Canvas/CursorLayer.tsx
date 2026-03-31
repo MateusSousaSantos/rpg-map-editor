@@ -1,9 +1,10 @@
-import { memo } from 'react';
-import { Layer, Image as KonvaImage, Rect } from 'react-konva';
+import { memo, useMemo } from 'react';
+import { Layer, Image as KonvaImage, Rect, Group } from 'react-konva';
 import useImage from 'use-image';
 import { useToolStore } from '../../stores/toolStore';
 import { useMapStore } from '../../stores/mapStore';
-import type { BaseTileDefinition, OverlayTileDefinition } from '../../types/map';
+import { useUISelectionStore } from '../../stores/uiSelectionStore';
+import type { BaseTileDefinition, OverlayTileDefinition, TileType } from '../../types/map';
 
 interface CursorLayerProps {
   tileSize: number;
@@ -17,8 +18,30 @@ interface CursorLayerProps {
  * Displays a semi-transparent preview of the selected tile at cursor position
  */
 export const CursorLayer = memo(({ tileSize, cursorGridX, cursorGridY, boxPreview }: CursorLayerProps) => {
-  const { activeTool, boxMode, selectedTileDefinitionId } = useToolStore();
+  const { activeTool, boxMode, selectedTileDefinitionId, isPickerActive } = useToolStore();
   const map = useMapStore((state) => state.map);
+  const getTileAt = useMapStore((state) => state.getTileAt);
+  const selectedLayerId = useUISelectionStore((state) => state.selectedLayerId);
+
+  // Resolve picker tile at cursor position
+  const pickerTile = useMemo(() => {
+    if (!isPickerActive || cursorGridX === null || cursorGridY === null || !map) return null;
+    const layer = selectedLayerId
+      ? map.layers.find(l => l.id === selectedLayerId)
+      : map.layers[0];
+    if (!layer) return null;
+    const types: TileType[] = ['overlay', 'wall', 'terrain'];
+    for (const type of types) {
+      const tile = getTileAt(layer.id, cursorGridX, cursorGridY, type);
+      if (tile) return tile;
+    }
+    return null;
+  }, [isPickerActive, cursorGridX, cursorGridY, map, selectedLayerId, getTileAt]);
+
+  const pickerDefinition = map?.tileDefinitions.find(
+    (def: BaseTileDefinition | OverlayTileDefinition) => def.id === pickerTile?.definitionId
+  );
+  const [pickerImage] = useImage(pickerDefinition?.textureUrl || '');
 
   // Find tile definition (before any early returns)
   const definition = map?.tileDefinitions.find(
@@ -27,6 +50,54 @@ export const CursorLayer = memo(({ tileSize, cursorGridX, cursorGridY, boxPrevie
 
   // Load tile image unconditionally (hooks must be called in the same order every render)
   const [image] = useImage(definition?.textureUrl || '');
+
+  // ── Picker mode overlay ──────────────────────────────────────────────────
+  if (isPickerActive && map) {
+    if (cursorGridX === null || cursorGridY === null) return null;
+    if (cursorGridX < 0 || cursorGridX >= map.width || cursorGridY < 0 || cursorGridY >= map.height) return null;
+
+    const px = cursorGridX * tileSize;
+    const py = cursorGridY * tileSize;
+    const previewSize = tileSize * 0.6;
+    const previewOffset = tileSize * 0.55;
+
+    return (
+      <Layer listening={false}>
+        {/* Highlight hovered cell */}
+        <Rect
+          x={px}
+          y={py}
+          width={tileSize}
+          height={tileSize}
+          fill={pickerTile ? 'rgba(0, 210, 211, 0.18)' : 'rgba(255, 255, 255, 0.08)'}
+          stroke={pickerTile ? 'rgba(0, 210, 211, 0.8)' : 'rgba(255, 255, 255, 0.3)'}
+          strokeWidth={2}
+        />
+
+        {/* Mini tile preview badge near cursor */}
+        {pickerTile && pickerImage && (
+          <Group x={px + previewOffset} y={py + previewOffset}>
+            <Rect
+              width={previewSize + 4}
+              height={previewSize + 4}
+              fill="rgba(15, 23, 42, 0.85)"
+              cornerRadius={4}
+              stroke="rgba(0, 210, 211, 0.7)"
+              strokeWidth={1}
+            />
+            <KonvaImage
+              image={pickerImage}
+              x={2}
+              y={2}
+              width={previewSize}
+              height={previewSize}
+              perfectDrawEnabled={false}
+            />
+          </Group>
+        )}
+      </Layer>
+    );
+  }
 
   // Show box preview when dragging
   if (activeTool === 'box' && boxPreview && map) {

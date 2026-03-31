@@ -3,6 +3,7 @@ import { Stage, Layer } from "react-konva";
 import Konva from "konva";
 import { useMapStore } from "../../stores/mapStore";
 import { useViewportStore } from "../../stores/viewportStore";
+import { useToolStore } from "../../stores/toolStore";
 import { useUISelectionStore } from "../../stores/uiSelectionStore";
 import { GridLayer } from "./BackgroundLayer";
 import { TileLayer } from "./TileLayer";
@@ -58,9 +59,32 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
     editable,
   });
 
+  // Picker (Alt key) state
+  const isPickerActive = useToolStore((s) => s.isPickerActive);
+  const setPickerActive = useToolStore((s) => s.setPickerActive);
+
   // Touch pinch/pan state
   const lastTouchDistRef = useRef<number | null>(null);
   const lastTouchMidRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Track Alt key for tile picker
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') setPickerActive(true);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') setPickerActive(false);
+    };
+    const handleBlur = () => setPickerActive(false);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('blur', handleBlur);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [setPickerActive]);
 
   // Handle container resize
   useEffect(() => {
@@ -371,7 +395,7 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
     <div
       ref={containerRef}
       className="relative flex-1 overflow-hidden bg-slate-900"
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "none", cursor: isPickerActive ? "crosshair" : undefined }}
       tabIndex={0}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
