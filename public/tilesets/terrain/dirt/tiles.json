@@ -4,9 +4,73 @@
   "type": "terrain",
   "tileSize": 32,
   "tiles": [
-    { "id": "dirt-1", "name": "Dirt 1", "file": "dirt_1.png" },
-    { "id": "dirt-2", "name": "Dirt 2", "file": "dirt_2.png" },
-    { "id": "dirt-3", "name": "Dirt 3", "file": "dirt_3.png" },
-    { "id": "dirt-4", "name": "Dirt 4", "file": "dirt_4.png" }
+    {
+      "id": "dirt-1",
+      "name": "Dirt 1",
+      "file": "dirt_1.png",
+      "overflowTilesByDirection": {
+        "top":         "dirt-top",
+        "bottom":      "dirt-bottom",
+        "left":        "dirt-left",
+        "right":       "dirt-right",
+        "topLeft":     "dirt-topLeft",
+        "topRight":    "dirt-topRight",
+        "bottomLeft":  "dirt-bottomLeft",
+        "bottomRight": "dirt-bottomRight"
+      }
+    },
+    {
+      "id": "dirt-2",
+      "name": "Dirt 2",
+      "file": "dirt_2.png",
+      "overflowTilesByDirection": {
+        "top":         "dirt-top",
+        "bottom":      "dirt-bottom",
+        "left":        "dirt-left",
+        "right":       "dirt-right",
+        "topLeft":     "dirt-topLeft",
+        "topRight":    "dirt-topRight",
+        "bottomLeft":  "dirt-bottomLeft",
+        "bottomRight": "dirt-bottomRight"
+      }
+    },
+    {
+      "id": "dirt-3",
+      "name": "Dirt 3",
+      "file": "dirt_3.png",
+      "overflowTilesByDirection": {
+        "top":         "dirt-top",
+        "bottom":      "dirt-bottom",
+        "left":        "dirt-left",
+        "right":       "dirt-right",
+        "topLeft":     "dirt-topLeft",
+        "topRight":    "dirt-topRight",
+        "bottomLeft":  "dirt-bottomLeft",
+        "bottomRight": "dirt-bottomRight"
+      }
+    },
+    {
+      "id": "dirt-4",
+      "name": "Dirt 4",
+      "file": "dirt_4.png",
+      "overflowTilesByDirection": {
+        "top":         "dirt-top",
+        "bottom":      "dirt-bottom",
+        "left":        "dirt-left",
+        "right":       "dirt-right",
+        "topLeft":     "dirt-topLeft",
+        "topRight":    "dirt-topRight",
+        "bottomLeft":  "dirt-bottomLeft",
+        "bottomRight": "dirt-bottomRight"
+      }
+    },
+    { "id": "dirt-top",         "name": "Dirt Overflow Top",          "file": "dirt_top.png",          "type": "overflow" },
+    { "id": "dirt-bottom",      "name": "Dirt Overflow Bottom",       "file": "dirt_bottom.png",       "type": "overflow" },
+    { "id": "dirt-left",        "name": "Dirt Overflow Left",         "file": "dirt_left.png",         "type": "overflow" },
+    { "id": "dirt-right",       "name": "Dirt Overflow Right",        "file": "dirt_right.png",        "type": "overflow" },
+    { "id": "dirt-topLeft",     "name": "Dirt Overflow Top-Left",     "file": "dirt_top_left.png",     "type": "overflow" },
+    { "id": "dirt-topRight",    "name": "Dirt Overflow Top-Right",    "file": "dirt_top_right.png",    "type": "overflow" },
+    { "id": "dirt-bottomLeft",  "name": "Dirt Overflow Bottom-Left",  "file": "dirt_bottom_left.png",  "type": "overflow" },
+    { "id": "dirt-bottomRight", "name": "Dirt Overflow Bottom-Right", "file": "dirt_bottom_right.png", "type": "overflow" }
   ]
 }
