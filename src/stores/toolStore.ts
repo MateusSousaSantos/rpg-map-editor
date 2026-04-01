@@ -24,8 +24,12 @@ interface ToolState {
   randomBrushEnabled: boolean;
   variantWeights: Record<string, Record<string, number>>;
 
+  // Picker (Alt key)
+  isPickerActive: boolean;
+
   // Actions
   setActiveTool: (tool: ToolType) => void;
+  setPickerActive: (active: boolean) => void;
   setSelectedTileDefinition: (defId: string, gridType: TileType) => void;
   setSelectedPropDefinition: (defId: string) => void;
   setBrushSize: (size: number) => void;
@@ -43,6 +47,9 @@ export const useToolStore = create<ToolState>((set) => ({
   brushSize: 1,
   randomBrushEnabled: false,
   variantWeights: {},
+  isPickerActive: false,
+
+  setPickerActive: (active) => set(() => ({ isPickerActive: active })),
 
   setActiveTool: (tool) =>
     set(() => ({

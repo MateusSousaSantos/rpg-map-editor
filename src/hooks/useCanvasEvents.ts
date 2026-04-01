@@ -393,6 +393,30 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
   }, [map, selectedPropDefinitionId, selectedLayerId, addProp, selectProps]);
 
   /**
+   * Handle tile picker - pick the tile under cursor (Alt+click)
+   */
+  const handlePickerTool = useCallback((gridX: number, gridY: number) => {
+    if (!map) return;
+    if (!isInBounds(gridX, gridY)) return;
+
+    const layer = selectedLayerId
+      ? map.layers.find(l => l.id === selectedLayerId)
+      : map.layers[0];
+    if (!layer) return;
+
+    // Priority: overlay > wall > terrain (skip overflow)
+    const tileTypes: TileType[] = ['overlay', 'wall', 'terrain'];
+    for (const type of tileTypes) {
+      const tile = getTileAt(layer.id, gridX, gridY, type);
+      if (tile) {
+        useToolStore.getState().setSelectedTileDefinition(tile.definitionId, tile.type);
+        useToolStore.getState().setActiveTool('brush');
+        return;
+      }
+    }
+  }, [map, selectedLayerId, isInBounds, getTileAt]);
+
+  /**
    * Handle mouse down event
    */
   const handleMouseDown = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -412,6 +436,12 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
 
     const { gridX, gridY } = screenToGrid(pointer.x, pointer.y);
     const { worldX, worldY } = screenToWorld(pointer.x, pointer.y);
+
+    // Alt+click: tile picker (eyedropper)
+    if (e.evt.altKey) {
+      handlePickerTool(gridX, gridY);
+      return;
+    }
 
     isDrawingRef.current = true;
     lastDrawnTileRef.current = { x: gridX, y: gridY };
@@ -434,7 +464,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         handlePlacePropTool(worldX, worldY);
         break;
     }
-  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handlePlacePropTool]);
+  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handlePlacePropTool, handlePickerTool]);
 
   /**
    * Handle mouse move event (for drag drawing)
