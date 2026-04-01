@@ -64,11 +64,11 @@ function Vault() {
     }));
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     createMap(formData.name, formData.width, formData.height, 32);
     const { addTileDefinition, addPropDefinition } = useMapStore.getState();
-    initializeAssets(addTileDefinition, addPropDefinition);
+    await initializeAssets(addTileDefinition, addPropDefinition);
     navigate("/app");
   };
 

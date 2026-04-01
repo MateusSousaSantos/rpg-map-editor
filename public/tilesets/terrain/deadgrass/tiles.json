@@ -1,0 +1,12 @@
+{
+  "group": "Dead Grass",
+  "groupColor": "#a3a35a",
+  "type": "terrain",
+  "tileSize": 32,
+  "tiles": [
+    { "id": "deadgrass-1", "name": "Dead Grass 1", "file": "deadgrass_1.png" },
+    { "id": "deadgrass-2", "name": "Dead Grass 2", "file": "deadgrass_2.png" },
+    { "id": "deadgrass-3", "name": "Dead Grass 3", "file": "deadgrass_3.png" },
+    { "id": "deadgrass-4", "name": "Dead Grass 4", "file": "deadgrass_4.png" }
+  ]
+}

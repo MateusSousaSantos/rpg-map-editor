@@ -1,0 +1,12 @@
+{
+  "group": "Dirt",
+  "groupColor": "#92400e",
+  "type": "terrain",
+  "tileSize": 32,
+  "tiles": [
+    { "id": "dirt-1", "name": "Dirt 1", "file": "dirt_1.png" },
+    { "id": "dirt-2", "name": "Dirt 2", "file": "dirt_2.png" },
+    { "id": "dirt-3", "name": "Dirt 3", "file": "dirt_3.png" },
+    { "id": "dirt-4", "name": "Dirt 4", "file": "dirt_4.png" }
+  ]
+}

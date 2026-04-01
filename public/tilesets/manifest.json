@@ -1,0 +1,15 @@
+{
+  "tilesets": [
+    "/tilesets/terrain/darkstone",
+    "/tilesets/terrain/deadgrass",
+    "/tilesets/terrain/dirt",
+    "/tilesets/terrain/grass",
+    "/tilesets/terrain/ice",
+    "/tilesets/terrain/stone",
+    "/tilesets/terrain/water",
+    "/tilesets/walls/wood"
+  ],
+  "props": [
+    "/props"
+  ]
+}

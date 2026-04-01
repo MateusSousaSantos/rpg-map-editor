@@ -1,0 +1,15 @@
+{
+  "group": "Wood",
+  "groupColor": "#a16207",
+  "type": "wall",
+  "tileSize": 16,
+  "tiles": [
+    {
+      "id": "wood-wall",
+      "name": "Wood Wall",
+      "file": "center.png",
+      "autotileGroup": "wood_wall",
+      "autotileBasePath": "/tilesets/walls/wood/autotile/"
+    }
+  ]
+}

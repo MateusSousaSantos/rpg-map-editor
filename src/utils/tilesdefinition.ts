@@ -1,141 +1,70 @@
-import type { BaseTileDefinition, PropDefinition } from "../types/map";
+import type { BaseTileDefinition, PropDefinition, TileType, Direction } from "../types/map";
 
-/**
- * Asset definitions - centralized, easy to maintain
- */
-export const TILE_DEFINITIONS: Record<string, BaseTileDefinition> = {
-  "grass-terrain": {
-    id: "grass-terrain",
-    name: "Grass",
-    type: "terrain",
-    group: "Grass",
-    groupColor: "#4ade80",
-    textureUrl: "/tilesets/terrain/grass/grass-0.png",
-    tileSize: 32,
-  },
-  "grass-terrain-1": {
-    id: "grass-terrain-1",
-    name: "Grass",
-    type: "terrain",
-    group: "Grass",
-    groupColor: "#4ade80",
-    textureUrl: "/tilesets/terrain/grass/grass-1.png",
-    tileSize: 32,
-  },
-  "grass-terrain-2": {
-    id: "grass-terrain-2",
-    name: "Grass",
-    type: "terrain",
-    group: "Grass",
-    groupColor: "#4ade80",
-    textureUrl: "/tilesets/terrain/grass/grass-2.png",
-    tileSize: 32,
-  },
-  "wood-terrain": {
-    id: "wood-terrain",
-    name: "Wood Floor",
-    type: "terrain",
-    group: "Wood",
-    groupColor: "#d97706",
-    textureUrl: "/tilesets/terrain/wood/wood-1.png",
-    tileSize: 16,
-  },
-  "water-terrain": {
-    id: "water-terrain",
-    name: "Water",
-    type: "terrain",
-    group: "Water",
-    groupColor: "#38bdf8",
-    textureUrl: "/tilesets/terrain/water/water_center.png",
-    tileSize: 32,
-    overflowTilesByDirection: {
-      top: "water-top",
-      bottom: "water-bottom",
-      left: "water-left",
-      right: "water-right",
-      topLeft: "water-topLeft",
-      topRight: "water-topRight",
-      bottomLeft: "water-bottomLeft",
-      bottomRight: "water-bottomRight",
-    },
-  },
-  "water-top": {
-    id: "water-top",
-    name: "Water Overflow Top",
-    type: "overflow",
-    textureUrl: "/tilesets/terrain/water/water_top.png",
-    tileSize: 32,
-  },
-  "water-bottom": {
-    id: "water-bottom",
-    name: "Water Overflow Bottom",
-    type: "overflow",
-    textureUrl: "/tilesets/terrain/water/water_bottom.png",
-    tileSize: 32,
-  },
-  "water-left": {
-    id: "water-left",
-    name: "Water Overflow Left",
-    type: "overflow",
-    textureUrl: "/tilesets/terrain/water/water_left.png",
-    tileSize: 32,
-  },
-  "water-right": {
-    id: "water-right",
-    name: "Water Overflow Right",
-    type: "overflow",
-    textureUrl: "/tilesets/terrain/water/water_right.png",
-    tileSize: 32,
-  },
-  "water-topLeft": {
-    id: "water-topLeft",
-    name: "Water Overflow Top-Left",
-    type: "overflow",
-    textureUrl: "/tilesets/terrain/water/water_top_left.png",
-    tileSize: 32,
-  },
-  "water-topRight": {
-    id: "water-topRight",
-    name: "Water Overflow Top-Right",
-    type: "overflow",
-    textureUrl: "/tilesets/terrain/water/water_top_right.png",
-    tileSize: 32,
-  },
-  "water-bottomLeft": {
-    id: "water-bottomLeft",
-    name: "Water Overflow Bottom-Left",
-    type: "overflow",
-    textureUrl: "/tilesets/terrain/water/water_bottom_left.png",
-    tileSize: 32,
-  },
-  "water-bottomRight": {
-    id: "water-bottomRight",
-    name: "Water Overflow Bottom-Right",
-    type: "overflow",
-    textureUrl: "/tilesets/terrain/water/water_bottom_right.png",
-    tileSize: 32,
-  },
-  "sand-terrain": {
-    id: "sand-terrain",
-    name: "Sand",
-    type: "terrain",
-    group: "Sand",
-    groupColor: "#fbbf24",
-    textureUrl: "/tilesets/terrain/sand/center.png",
-    tileSize: 16,
-  },
-  "wood-wall": {
-    id: "wood-wall",
-    name: "Wood Wall",
-    type: "wall",
-    group: "Wood",
-    groupColor: "#a16207",
-    textureUrl: "/tilesets/walls/wood/center.png",
-    tileSize: 16,
-    autotileGroup: "wood_wall",
-    autotileBasePath: "/tilesets/walls/wood/autotile/",
-  },
-};
+// ============================================================================
+// tiles.json SCHEMA
+// ============================================================================
+
+interface TileEntry {
+  id: string;
+  name: string;
+  file: string;
+  /** Override the folder-level type for this tile (e.g. "overflow") */
+  type?: TileType;
+  overflowTilesByDirection?: Record<Direction, string>;
+  autotileGroup?: string;
+  autotileBasePath?: string;
+}
+
+interface TilesetJson {
+  group?: string;
+  groupColor?: string;
+  type: TileType;
+  tileSize: number;
+  tiles: TileEntry[];
+}
+
+interface TilesetManifest {
+  tilesets: string[];
+}
+
+// ============================================================================
+// DYNAMIC LOADER
+// ============================================================================
+
+export async function loadTileDefinitions(): Promise<BaseTileDefinition[]> {
+  const manifestRes = await fetch("/tilesets/manifest.json");
+  if (!manifestRes.ok) {
+    console.error("Failed to load /tilesets/manifest.json");
+    return [];
+  }
+  const manifest: TilesetManifest = await manifestRes.json();
+
+  const results = await Promise.allSettled(
+    manifest.tilesets.map(async (folderPath) => {
+      const res = await fetch(`${folderPath}/tiles.json`);
+      if (!res.ok) {
+        console.warn(`Failed to load tiles.json for ${folderPath}`);
+        return [] as BaseTileDefinition[];
+      }
+      const json: TilesetJson = await res.json();
+
+      return json.tiles.map((tile): BaseTileDefinition => ({
+        id: tile.id,
+        name: tile.name,
+        type: tile.type ?? json.type,
+        textureUrl: `${folderPath}/${tile.file}`,
+        tileSize: json.tileSize,
+        ...(json.group && { group: json.group }),
+        ...(json.groupColor && { groupColor: json.groupColor }),
+        ...(tile.overflowTilesByDirection && { overflowTilesByDirection: tile.overflowTilesByDirection }),
+        ...(tile.autotileGroup && { autotileGroup: tile.autotileGroup }),
+        ...(tile.autotileBasePath && { autotileBasePath: tile.autotileBasePath }),
+      }));
+    }),
+  );
+
+  return results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+}
 
 export const PROP_DEFINITIONS: Record<string, PropDefinition> = {
   fence: {
@@ -192,13 +121,15 @@ export const pickRandomVariant = (
 };
 
 /**
- * Initialize all asset definitions in a map
- * Call this when creating a new map or loading a project
+ * Initialize all asset definitions in a map.
+ * Fetches tile definitions from the public/tilesets manifest at runtime.
+ * Call this when creating a new map or loading a project.
  */
-export const initializeAssets = (
+export const initializeAssets = async (
   addTileDefinition: (def: BaseTileDefinition) => void,
   addPropDefinition: (def: PropDefinition) => void,
-) => {
-  Object.values(TILE_DEFINITIONS).forEach(addTileDefinition);
+): Promise<void> => {
+  const tileDefs = await loadTileDefinitions();
+  tileDefs.forEach(addTileDefinition);
   Object.values(PROP_DEFINITIONS).forEach(addPropDefinition);
 };

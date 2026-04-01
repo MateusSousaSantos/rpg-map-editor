@@ -1,0 +1,12 @@
+{
+  "group": "Dark Stone",
+  "groupColor": "#6b7280",
+  "type": "terrain",
+  "tileSize": 32,
+  "tiles": [
+    { "id": "darkstone-1", "name": "Dark Stone 1", "file": "darkstone_1.png" },
+    { "id": "darkstone-2", "name": "Dark Stone 2", "file": "darkstone_2.png" },
+    { "id": "darkstone-3", "name": "Dark Stone 3", "file": "darkstone_3.png" },
+    { "id": "darkstone-4", "name": "Dark Stone 4", "file": "darkstone_4.png" }
+  ]
+}

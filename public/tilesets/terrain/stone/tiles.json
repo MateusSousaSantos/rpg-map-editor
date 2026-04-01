@@ -1,0 +1,12 @@
+{
+  "group": "Stone",
+  "groupColor": "#9ca3af",
+  "type": "terrain",
+  "tileSize": 32,
+  "tiles": [
+    { "id": "stone-1", "name": "Stone 1", "file": "stone_1.png" },
+    { "id": "stone-2", "name": "Stone 2", "file": "stone_2.png" },
+    { "id": "stone-3", "name": "Stone 3", "file": "stone_3.png" },
+    { "id": "stone-4", "name": "Stone 4", "file": "stone_4.png" }
+  ]
+}

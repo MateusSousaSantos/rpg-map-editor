@@ -1,0 +1,12 @@
+{
+  "group": "Grass",
+  "groupColor": "#4ade80",
+  "type": "terrain",
+  "tileSize": 32,
+  "tiles": [
+    { "id": "grass-terrain-v1", "name": "Grass V1", "file": "grass_1.png" },
+    { "id": "grass-terrain-v2", "name": "Grass V2", "file": "grass_2.png" },
+    { "id": "grass-terrain-v3", "name": "Grass V3", "file": "grass_3.png" },
+    { "id": "grass-terrain-v4", "name": "Grass V4", "file": "grass_4.png" }
+  ]
+}

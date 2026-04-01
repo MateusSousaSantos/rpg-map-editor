@@ -1,0 +1,31 @@
+{
+  "group": "Water",
+  "groupColor": "#38bdf8",
+  "type": "terrain",
+  "tileSize": 32,
+  "tiles": [
+    {
+      "id": "water-terrain",
+      "name": "Water",
+      "file": "water_center.png",
+      "overflowTilesByDirection": {
+        "top":         "water-top",
+        "bottom":      "water-bottom",
+        "left":        "water-left",
+        "right":       "water-right",
+        "topLeft":     "water-topLeft",
+        "topRight":    "water-topRight",
+        "bottomLeft":  "water-bottomLeft",
+        "bottomRight": "water-bottomRight"
+      }
+    },
+    { "id": "water-top",         "name": "Water Overflow Top",          "file": "water_top.png",          "type": "overflow" },
+    { "id": "water-bottom",      "name": "Water Overflow Bottom",       "file": "water_bottom.png",       "type": "overflow" },
+    { "id": "water-left",        "name": "Water Overflow Left",         "file": "water_left.png",         "type": "overflow" },
+    { "id": "water-right",       "name": "Water Overflow Right",        "file": "water_right.png",        "type": "overflow" },
+    { "id": "water-topLeft",     "name": "Water Overflow Top-Left",     "file": "water_top_left.png",     "type": "overflow" },
+    { "id": "water-topRight",    "name": "Water Overflow Top-Right",    "file": "water_top_right.png",    "type": "overflow" },
+    { "id": "water-bottomLeft",  "name": "Water Overflow Bottom-Left",  "file": "water_bottom_left.png",  "type": "overflow" },
+    { "id": "water-bottomRight", "name": "Water Overflow Bottom-Right", "file": "water_bottom_right.png", "type": "overflow" }
+  ]
+}
