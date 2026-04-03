@@ -72,8 +72,10 @@ function Vault() {
     navigate("/app");
   };
 
-  const handleLoad = (mapId: string) => {
+  const handleLoad = async (mapId: string) => {
     loadMapById(mapId);
+    const { addTileDefinition, addPropDefinition } = useMapStore.getState();
+    await initializeAssets(addTileDefinition, addPropDefinition);
     navigate("/app");
   };
 

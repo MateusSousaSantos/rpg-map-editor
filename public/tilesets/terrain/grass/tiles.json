@@ -3,10 +3,18 @@
   "groupColor": "#4ade80",
   "type": "terrain",
   "tileSize": 32,
+  "huePresets": [
+    { "label": "Green",  "hue": 120, "saturation": 65 },
+    { "label": "Autumn", "hue": 35,  "saturation": 70 },
+    { "label": "Dead",   "hue": 55,  "saturation": 25 },
+    { "label": "Ice",    "hue": 195, "saturation": 30 },
+    { "label": "Desert", "hue": 45,  "saturation": 55 },
+    { "label": "Lush",   "hue": 130, "saturation": 80 }
+  ],
   "tiles": [
-    { "id": "grass-terrain-v1", "name": "Grass V1", "file": "grass_1.png" },
-    { "id": "grass-terrain-v2", "name": "Grass V2", "file": "grass_2.png" },
-    { "id": "grass-terrain-v3", "name": "Grass V3", "file": "grass_3.png" },
-    { "id": "grass-terrain-v4", "name": "Grass V4", "file": "grass_4.png" }
+    { "id": "grass-terrain-v1", "name": "Grass V1", "file": "grass_1.png", "grayscaleFile": "grass_1.png", "supportsTinting": true },
+    { "id": "grass-terrain-v2", "name": "Grass V2", "file": "grass_2.png", "grayscaleFile": "grass_2.png", "supportsTinting": true },
+    { "id": "grass-terrain-v3", "name": "Grass V3", "file": "grass_3.png", "grayscaleFile": "grass_3.png", "supportsTinting": true },
+    { "id": "grass-terrain-v4", "name": "Grass V4", "file": "grass_4.png", "grayscaleFile": "grass_4.png", "supportsTinting": true }
   ]
 }

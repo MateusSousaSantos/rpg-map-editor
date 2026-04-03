@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMapStore } from "../../stores/mapStore";
 import { useToolStore } from "../../stores/toolStore";
+import { useTextureCache } from "../../stores/textureCache";
+import { tintGrayscaleCanvas } from "../../utils/recolor";
 import type { BaseTileDefinition, TileType } from "../../types/map";
 import { FaChevronDown, FaChevronLeft } from "react-icons/fa";
 
@@ -257,6 +259,165 @@ const TileCategory = ({
   );
 };
 
+// ─── Terrain Tint Panel ────────────────────────────────────────────────────
+
+/** Convert hue (0–360) + saturation (0–100) to a #rrggbb hex string at L=50%. */
+function hslToHex(h: number, s: number): string {
+  const lNorm = 0.5;
+  const sNorm = s / 100;
+  const a = sNorm * Math.min(lNorm, 1 - lNorm);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = lNorm - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color).toString(16).padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+/** Extract hue (0–360) + saturation (0–100) from a #rrggbb hex string. */
+function hexToHsl(hex: string): { hue: number; saturation: number } {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  let h = 0;
+  let s = 0;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { hue: Math.round(h * 360), saturation: Math.round(s * 100) };
+}
+
+interface TerrainTintPanelProps {
+  tileDef: BaseTileDefinition;
+  tintConfig: { hue: number; saturation: number; brightness: number };
+  onTintChange: (config: Partial<{ hue: number; saturation: number; brightness: number }>) => void;
+  getTexture: (url: string) => HTMLImageElement | undefined;
+  loadTexture: (url: string) => Promise<HTMLImageElement>;
+}
+
+const TerrainTintPanel = ({
+  tileDef,
+  tintConfig,
+  onTintChange,
+  getTexture,
+  loadTexture,
+}: TerrainTintPanelProps) => {
+  const previewRef = useRef<HTMLCanvasElement>(null);
+
+  // Redraw the preview whenever the tint config or source tile changes
+  useEffect(() => {
+    const grayscalePath = tileDef.grayscaleTexturePath!;
+    const draw = (img: HTMLImageElement) => {
+      const preview = previewRef.current;
+      if (!preview) return;
+      const result = tintGrayscaleCanvas(img, tintConfig);
+      const ctx = preview.getContext("2d")!;
+      ctx.clearRect(0, 0, preview.width, preview.height);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(result, 0, 0, preview.width, preview.height);
+    };
+    const existing = getTexture(grayscalePath);
+    if (existing) { draw(existing); return; }
+    loadTexture(grayscalePath).then(draw).catch(() => {});
+  }, [tileDef, tintConfig, getTexture, loadTexture]);
+
+  // Presets come from the tile definition (loaded from tiles.json)
+  const presets = tileDef.huePresets ?? [];
+
+  // Hex value used for the <input type="color"> — derived from current hue+saturation
+  const pickerHex = hslToHex(tintConfig.hue, tintConfig.saturation);
+
+  const isPresetActive = (p: { hue: number; saturation: number }) =>
+    tintConfig.hue === p.hue && tintConfig.saturation === p.saturation;
+
+  return (
+    <div className="border border-edge rounded p-3 space-y-3 bg-raised/40">
+
+      {/* Header: label + live preview */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-ink-secondary">Terrain Color</span>
+        <canvas
+          ref={previewRef}
+          width={32}
+          height={32}
+          className="rounded border border-edge"
+          style={{ imageRendering: "pixelated" }}
+        />
+      </div>
+
+      {/* Named presets from tiles.json */}
+      {presets.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {presets.map((p) => (
+            <button
+              key={p.label}
+              title={`${p.label} (hue ${p.hue}°)`}
+              onClick={() => onTintChange({ hue: p.hue, saturation: p.saturation })}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] border transition-colors ${
+                isPresetActive(p)
+                  ? "border-accent bg-accent/10 text-ink"
+                  : "border-edge bg-raised text-ink-muted hover:border-edge-strong hover:text-ink"
+              }`}
+            >
+              <span
+                className="inline-block w-2.5 h-2.5 rounded-full shrink-0 border border-white/20"
+                style={{ backgroundColor: hslToHex(p.hue, p.saturation) }}
+              />
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Color picker — clicking opens the native OS color dialog */}
+      <div>
+        <label className="text-[10px] text-ink-muted block mb-1">Custom color</label>
+        <div className="relative h-7 rounded border border-edge overflow-hidden cursor-pointer">
+          <div className="absolute inset-0" style={{ backgroundColor: pickerHex }} />
+          <input
+            type="color"
+            value={pickerHex}
+            onChange={(e) => {
+              const { hue, saturation } = hexToHsl(e.target.value);
+              onTintChange({ hue, saturation });
+            }}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+        </div>
+      </div>
+
+      {/* Brightness slider */}
+      <div>
+        <label className="text-[10px] text-ink-muted block mb-1">
+          Brightness: {tintConfig.brightness}%
+        </label>
+        <input
+          type="range" min="50" max="150" value={tintConfig.brightness}
+          onChange={(e) => onTintChange({ brightness: Number(e.target.value) })}
+          className="w-full"
+        />
+      </div>
+
+      {/* Reset */}
+      <button
+        onClick={() => onTintChange({ hue: 0, saturation: 0, brightness: 100 })}
+        className="text-[10px] text-ink-muted hover:text-ink transition-colors"
+      >
+        Reset
+      </button>
+    </div>
+  );
+};
+
 export const TilesTab = () => {
   const { map, removeTileDefinition } = useMapStore();
   const {
@@ -267,7 +428,10 @@ export const TilesTab = () => {
     randomBrushEnabled,
     variantWeights,
     setVariantWeight,
+    terrainTintConfig,
+    setTerrainTint,
   } = useToolStore();
+  const { getTexture, loadTexture } = useTextureCache();
 
   if (!map) return null;
 
@@ -294,6 +458,10 @@ export const TilesTab = () => {
 
   const currentSelectedTileId = selectedTileGridType
     ? selectedTileDefinitionId
+    : null;
+
+  const selectedDef = currentSelectedTileId
+    ? map.tileDefinitions.find((d) => d.id === currentSelectedTileId)
     : null;
 
   if (map.tileDefinitions.length === 0) {
@@ -328,6 +496,17 @@ export const TilesTab = () => {
         variantWeights={variantWeights}
         onSetVariantWeight={setVariantWeight}
       />
+
+      {/* Terrain Tint Controls — shown when selected tile supports tinting */}
+      {selectedDef?.supportsTinting && selectedDef.grayscaleTexturePath && (
+        <TerrainTintPanel
+          tileDef={selectedDef}
+          tintConfig={terrainTintConfig}
+          onTintChange={setTerrainTint}
+          getTexture={getTexture}
+          loadTexture={loadTexture}
+        />
+      )}
     </div>
   );
 };

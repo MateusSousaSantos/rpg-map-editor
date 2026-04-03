@@ -3,7 +3,7 @@
 // ============================================================================
 
 import { create } from 'zustand';
-import type { TileType } from '../types/map';
+import type { TileType, TerrainTintConfig } from '../types/map';
 export type ToolType = 'brush' | 'eraser' | 'fill' | 'place-prop' | 'select' | 'pan' | 'box';
 
 interface ToolState {
@@ -27,6 +27,12 @@ interface ToolState {
   // Picker (Alt key)
   isPickerActive: boolean;
 
+  // Terrain tint (HSL, applied at placement time)
+  terrainTintConfig: TerrainTintConfig;
+
+  // Prop palette slot hues (applied at placement time)
+  propSlotHues: Record<string, number>;
+
   // Actions
   setActiveTool: (tool: ToolType) => void;
   setPickerActive: (active: boolean) => void;
@@ -36,6 +42,9 @@ interface ToolState {
   setRandomBrushEnabled: (enabled: boolean) => void;
   setVariantWeight: (group: string, definitionId: string, weight: number) => void;
   clearToolSelection: () => void;
+  setTerrainTint: (config: Partial<TerrainTintConfig>) => void;
+  setPropSlotHue: (slot: string, hue: number) => void;
+  resetPropSlotHues: () => void;
 }
 
 export const useToolStore = create<ToolState>((set) => ({
@@ -48,6 +57,8 @@ export const useToolStore = create<ToolState>((set) => ({
   randomBrushEnabled: false,
   variantWeights: {},
   isPickerActive: false,
+  terrainTintConfig: { hue: 0, saturation: 0, brightness: 100 },
+  propSlotHues: {},
 
   setPickerActive: (active) => set(() => ({ isPickerActive: active })),
 
@@ -98,4 +109,16 @@ export const useToolStore = create<ToolState>((set) => ({
         },
       },
     })),
+
+  setTerrainTint: (config) =>
+    set((state) => ({
+      terrainTintConfig: { ...state.terrainTintConfig, ...config },
+    })),
+
+  setPropSlotHue: (slot, hue) =>
+    set((state) => ({
+      propSlotHues: { ...state.propSlotHues, [slot]: hue },
+    })),
+
+  resetPropSlotHues: () => set(() => ({ propSlotHues: {} })),
 }));

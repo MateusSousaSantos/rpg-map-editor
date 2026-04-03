@@ -26,6 +26,11 @@ export interface BaseTileDefinition {
   autotileGroup?: string;      // e.g., "grass", "stone_wall" — tiles with the same group connect
   autotileBasePath?: string;   // e.g., "/tilesets/terrain/grass/autotile/" — variant files named {bitmask}.png
   autotileRules?: AutotileRule[];
+
+  // HSL tinting (requires a matching grayscale source texture)
+  grayscaleTexturePath?: string; // path to the desaturated source PNG
+  supportsTinting?: boolean;     // opt-in flag
+  huePresets?: { label: string; hue: number; saturation: number }[]; // named color presets from tiles.json
 }
 
 /**
@@ -49,6 +54,20 @@ export interface AutotileRule {
 export type Direction =
   | 'top' | 'right' | 'bottom' | 'left'
   | 'topRight' | 'bottomRight' | 'bottomLeft' | 'topLeft';
+
+// ─── Recolor config for terrain tiles ────────────────────────────────────────
+export interface TerrainTintConfig {
+  hue: number;        // 0-360
+  saturation: number; // 0-100
+  brightness: number; // 50-150, where 100 = neutral
+}
+
+// ─── Color slots for props ────────────────────────────────────────────────────
+export interface PropColorSlot {
+  name: string;                        // 'primary' | 'secondary' | 'accent' | custom
+  baseColor: [number, number, number]; // RGB of the source pixel region
+  label: string;                       // Display name in UI
+}
 
 /**
  * Overlay tile definition - special for overlay tiles
@@ -81,7 +100,8 @@ export interface TileInstance {
 
   // Instance-specific overrides
   opacity?: number;           // overlay tiles might have custom opacity
-  tint?: string;             // optional color overlay (hex)
+  tint?: string;             // optional color overlay (hex, multiply blend)
+  tintConfig?: TerrainTintConfig; // HSL tint applied via grayscale source
   rotation?: 0 | 90 | 180 | 270;  // only for specific tile types
 
   type: TileType;
@@ -114,6 +134,10 @@ export interface PropDefinition {
   defaultScaleX?: number;
   defaultScaleY?: number;
 
+  // Palette recoloring
+  colorSlots?: PropColorSlot[]; // defined color zones for palette swap
+  supportsRecolor?: boolean;    // opt-in flag
+
   metadata?: Record<string, any>;  // asset metadata
 }
 
@@ -137,7 +161,8 @@ export interface PropInstance {
 
   // Appearance
   opacity: number;            // 0-1
-  tint?: string;              // optional color overlay (hex)
+  tint?: string;              // optional color overlay (hex, multiply blend)
+  slotHues?: Record<string, number>; // per-instance hue per palette slot
 
   // Organization
   zIndex: number;             // ordering within layer

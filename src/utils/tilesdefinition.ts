@@ -13,6 +13,12 @@ interface TileEntry {
   overflowTilesByDirection?: Record<Direction, string>;
   autotileGroup?: string;
   autotileBasePath?: string;
+  /** Path to the grayscale version of this tile, relative to the tileset folder */
+  grayscaleFile?: string;
+  /** Opt in to HSL runtime tinting (requires grayscaleFile) */
+  supportsTinting?: boolean;
+  /** Named color presets for this tile — overrides tileset-level presets */
+  huePresets?: { label: string; hue: number; saturation: number }[];
 }
 
 interface TilesetJson {
@@ -20,6 +26,8 @@ interface TilesetJson {
   groupColor?: string;
   type: TileType;
   tileSize: number;
+  /** Named color presets shared by all tiles in this tileset */
+  huePresets?: { label: string; hue: number; saturation: number }[];
   tiles: TileEntry[];
 }
 
@@ -59,6 +67,9 @@ export async function loadTileDefinitions(): Promise<BaseTileDefinition[]> {
         ...(tile.overflowTilesByDirection && { overflowTilesByDirection: tile.overflowTilesByDirection }),
         ...(tile.autotileGroup && { autotileGroup: tile.autotileGroup }),
         ...(tile.autotileBasePath && { autotileBasePath: tile.autotileBasePath }),
+        ...(tile.grayscaleFile && { grayscaleTexturePath: `${folderPath}/${tile.grayscaleFile}` }),
+        ...(tile.supportsTinting && { supportsTinting: true }),
+        ...((tile.huePresets ?? json.huePresets) && { huePresets: tile.huePresets ?? json.huePresets }),
       }));
     }),
   );
@@ -77,11 +88,14 @@ export const PROP_DEFINITIONS: Record<string, PropDefinition> = {
     width: 16,
     height: 16,
     tags: ["furniture"],
+    supportsRecolor: true,
+    colorSlots: [
+      { name: "wood", baseColor: [120, 80, 40], label: "Wood" },
+    ],
   },
   stone: {
     id: "stone",
     name: "Stone",
-
     category: "nature",
     group: "Nature",
     groupColor: "#a3e635",
@@ -89,6 +103,10 @@ export const PROP_DEFINITIONS: Record<string, PropDefinition> = {
     width: 16,
     height: 16,
     tags: ["nature"],
+    supportsRecolor: true,
+    colorSlots: [
+      { name: "rock", baseColor: [140, 140, 140], label: "Stone" },
+    ],
   },
 };
 

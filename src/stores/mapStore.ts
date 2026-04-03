@@ -639,12 +639,19 @@ export const useMapStore = create<MapState>()(
     addTileDefinition: (definition) =>
       set((state) => {
         if (state.map) {
-          // Check if definition already exists
-          const exists = state.map.tileDefinitions.some(d => d.id === definition.id);
-          if (!exists) {
+          const existingIdx = state.map.tileDefinitions.findIndex(d => d.id === definition.id);
+          if (existingIdx === -1) {
             state.map.tileDefinitions.push(definition);
-            state.map.lastModified = new Date();
+          } else {
+            // Merge: keep instance data already on the stored def, but apply any new
+            // asset-level fields (e.g. grayscaleTexturePath, supportsTinting) from the
+            // freshly loaded definition so they survive across map loads.
+            state.map.tileDefinitions[existingIdx] = {
+              ...state.map.tileDefinitions[existingIdx],
+              ...definition,
+            };
           }
+          state.map.lastModified = new Date();
         }
       }),
 

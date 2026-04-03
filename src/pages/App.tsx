@@ -8,6 +8,7 @@ import { Navbar } from "../components/Layout/Navbar";
 import { useMapStore } from "../stores/mapStore";
 import { useUISelectionStore } from "../stores/uiSelectionStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
+import { initializeAssets } from "../utils/tilesdefinition";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 
 function App() {
@@ -17,6 +18,14 @@ function App() {
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
+
+  // Re-sync tile/prop definitions from JSON on every mount so that newly added
+  // fields (e.g. grayscaleTexturePath, supportsTinting) are always present,
+  // even when the map was restored from localStorage without those fields.
+  useEffect(() => {
+    const { addTileDefinition, addPropDefinition } = useMapStore.getState();
+    initializeAssets(addTileDefinition, addPropDefinition);
+  }, []);
 
   useEffect(() => {
     if (map && map.layers.length > 0) {

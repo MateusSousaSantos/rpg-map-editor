@@ -138,6 +138,12 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       type: resolvedType,
     };
 
+    // Inject active tint config for tintable tiles
+    const resolvedDef = map.tileDefinitions.find((d) => d.id === resolvedDefId);
+    if (resolvedDef?.supportsTinting) {
+      newTile.tintConfig = { ...useToolStore.getState().terrainTintConfig };
+    }
+
     addTile(layer.id, newTile);
     strokeActionsRef.current.push({ type: 'ADD_TILE', layerId: layer.id, tile: { ...newTile } });
   }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTileAt, addTile, removeTile]);
@@ -241,6 +247,12 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
           gridY: y,
           type: resolvedType,
         };
+
+        // Inject active tint config for tintable tiles
+        const resolvedDef = map.tileDefinitions.find((d) => d.id === resolvedDefId);
+        if (resolvedDef?.supportsTinting) {
+          newTile.tintConfig = { ...useToolStore.getState().terrainTintConfig };
+        }
 
         tilesToAdd.push(newTile);
         historyActions.push({ type: 'ADD_TILE', layerId: layer.id, tile: { ...newTile } });
@@ -381,6 +393,14 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
 
     // Create prop instance
     const newProp = createProp(propDefinition, worldX, worldY, nextZIndex);
+
+    // Inject active slot hues for recolorable props
+    if (propDefinition.supportsRecolor && propDefinition.colorSlots?.length) {
+      const { propSlotHues } = useToolStore.getState();
+      if (Object.keys(propSlotHues).length > 0) {
+        newProp.slotHues = { ...propSlotHues };
+      }
+    }
 
     // Add to map
     addProp(layer.id, newProp);

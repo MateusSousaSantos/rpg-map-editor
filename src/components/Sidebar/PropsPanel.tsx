@@ -8,6 +8,86 @@ import { useUISelectionStore } from "../../stores/uiSelectionStore";
 import { FiTrash2, FiEye, FiEyeOff, FiLock, FiUnlock } from "react-icons/fi";
 import { FaChevronDown } from "react-icons/fa";
 import { useState } from "react";
+import type { PropColorSlot } from "../../types/map";
+
+// ─── Prop Palette Panel ────────────────────────────────────────────────────
+
+const HUE_PRESETS = [
+  { label: "Green",  hue: 120, color: "#4ade80" },
+  { label: "Blue",   hue: 210, color: "#60a5fa" },
+  { label: "Red",    hue: 0,   color: "#f87171" },
+  { label: "Yellow", hue: 55,  color: "#facc15" },
+  { label: "Purple", hue: 270, color: "#c084fc" },
+  { label: "Brown",  hue: 30,  color: "#a78a5a" },
+  { label: "Cyan",   hue: 185, color: "#22d3ee" },
+  { label: "Orange", hue: 25,  color: "#fb923c" },
+];
+
+interface PropPalettePanelProps {
+  colorSlots: PropColorSlot[];
+  slotHues: Record<string, number>;
+  onSetSlotHue: (slot: string, hue: number) => void;
+  onReset: () => void;
+}
+
+const PropPalettePanel = ({
+  colorSlots,
+  slotHues,
+  onSetSlotHue,
+  onReset,
+}: PropPalettePanelProps) => (
+  <div className="border border-slate-700 rounded p-3 space-y-3 bg-slate-900/40">
+    <div className="flex items-center justify-between">
+      <span className="text-xs font-semibold text-slate-300">Prop Colors</span>
+      <button
+        onClick={onReset}
+        className="text-[10px] text-slate-400 hover:text-slate-200 transition-colors"
+      >
+        Reset
+      </button>
+    </div>
+    {colorSlots.map((slot) => (
+      <div key={slot.name} className="space-y-1">
+        <label className="text-[10px] text-slate-400 block">
+          {slot.label}
+          {slotHues[slot.name] !== undefined && (
+            <span className="ml-1 text-slate-500">— {slotHues[slot.name]}°</span>
+          )}
+        </label>
+        {/* Hue preset chips */}
+        <div className="flex flex-wrap gap-1">
+          {HUE_PRESETS.map((p) => (
+            <button
+              key={p.label}
+              title={p.label}
+              onClick={() => onSetSlotHue(slot.name, p.hue)}
+              className="w-5 h-5 rounded-full border-2 transition-transform hover:scale-110"
+              style={{
+                backgroundColor: p.color,
+                borderColor: slotHues[slot.name] === p.hue ? "#e2e8f0" : "transparent",
+              }}
+            />
+          ))}
+        </div>
+        {/* Fine-tune hue slider */}
+        <input
+          type="range"
+          min="0"
+          max="359"
+          value={slotHues[slot.name] ?? 0}
+          onChange={(e) => onSetSlotHue(slot.name, Number(e.target.value))}
+          className="w-full"
+          style={{
+            background: `linear-gradient(to right, hsl(0,70%,50%), hsl(60,70%,50%), hsl(120,70%,50%), hsl(180,70%,50%), hsl(240,70%,50%), hsl(300,70%,50%), hsl(360,70%,50%))`,
+          }}
+        />
+      </div>
+    ))}
+    <p className="text-[10px] text-slate-500">
+      💡 Hues apply to the next placed prop
+    </p>
+  </div>
+);
 
 interface PropCategoryProps {
   title: string;
@@ -97,8 +177,13 @@ const PropCategory = ({
 
 export const PropsPanel = () => {
   const map = useMapStore((state) => state.map);
-  const { selectedPropDefinitionId, setSelectedPropDefinition } =
-    useToolStore();
+  const {
+    selectedPropDefinitionId,
+    setSelectedPropDefinition,
+    propSlotHues,
+    setPropSlotHue,
+    resetPropSlotHues,
+  } = useToolStore();
   const { selectedPropIds, selectedLayerId, selectionMode } =
     useUISelectionStore();
   const updateProp = useMapStore((state) => state.updateProp);
@@ -140,6 +225,11 @@ export const PropsPanel = () => {
 
   const selectedPropDefinition = selectedProp
     ? map.propDefinitions.find((def) => def.id === selectedProp.definitionId)
+    : null;
+
+  // Prop def currently selected in the library (for placement tool)
+  const activePlaceDef = selectedPropDefinitionId
+    ? map.propDefinitions.find((d) => d.id === selectedPropDefinitionId)
     : null;
 
   const handleDragStart = (e: React.DragEvent, propDefId: string) => {
@@ -215,6 +305,16 @@ export const PropsPanel = () => {
           </p>
         </div>
       </div>
+
+      {/* Prop Palette Controls — shown when the selected library def supports recoloring */}
+      {activePlaceDef?.supportsRecolor && activePlaceDef.colorSlots?.length && (
+        <PropPalettePanel
+          colorSlots={activePlaceDef.colorSlots}
+          slotHues={propSlotHues}
+          onSetSlotHue={setPropSlotHue}
+          onReset={resetPropSlotHues}
+        />
+      )}
 
       {/* Selected Prop Properties Section */}
       {selectionMode === "props" &&

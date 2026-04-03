@@ -3,6 +3,8 @@ import type { MapLayer, TileInstance, BaseTileDefinition, OverlayTileDefinition 
 import { useTextureCache } from '../stores/textureCache';
 import { useViewportStore } from '../stores/viewportStore';
 import { isAutotileEnabled, computeBlobBitmask, resolveAutotileTexturePath } from '../utils/autotiling';
+import { tintGrayscaleCanvas } from '../utils/recolor';
+import { getCacheKey, getRecoloredCanvas, setRecoloredCanvas } from '../stores/recolorCache';
 
 interface UseNativeCanvasTilesProps {
   layer: MapLayer;
@@ -171,7 +173,8 @@ export const useNativeCanvasTiles = ({
           prevTile.definitionId !== tile.definitionId ||
           prevTile.rotation !== tile.rotation ||
           prevTile.opacity !== tile.opacity ||
-          prevTile.tint !== tile.tint) {
+          prevTile.tint !== tile.tint ||
+          JSON.stringify(prevTile.tintConfig) !== JSON.stringify(tile.tintConfig)) {
         hasChanges = true;
         break;
       }
@@ -200,6 +203,11 @@ export const useNativeCanvasTiles = ({
 
       // Always ensure the base texture is loaded as a fallback
       enqueue(definition.textureUrl);
+
+      // For tintable tiles, also load the grayscale source texture
+      if (definition.supportsTinting && definition.grayscaleTexturePath) {
+        enqueue(definition.grayscaleTexturePath);
+      }
 
       // For autotile tiles, also load the resolved variant URL
       const resolvedUrl = resolvedTextureUrls.get(tile.id);
@@ -276,6 +284,23 @@ export const useNativeCanvasTiles = ({
       }
 
       // Apply color tint if specified
+      if (tile.tintConfig && definition.supportsTinting && definition.grayscaleTexturePath) {
+        // HSL tint via grayscale source (takes priority over hex multiply tint)
+        const grayTexture = getTexture(definition.grayscaleTexturePath);
+        if (grayTexture) {
+          const cacheKey = getCacheKey(definition.grayscaleTexturePath, tile.tintConfig);
+          let recolored = getRecoloredCanvas(cacheKey);
+          if (!recolored) {
+            recolored = tintGrayscaleCanvas(grayTexture, tile.tintConfig);
+            setRecoloredCanvas(cacheKey, recolored);
+          }
+          ctx.drawImage(recolored, x, y, tileSize, tileSize);
+          ctx.restore();
+          continue;
+        }
+      }
+
+      // Apply hex color tint if specified
       if (tile.tint) {
         // Parse hex color
         const r = parseInt(tile.tint.slice(1, 3), 16);

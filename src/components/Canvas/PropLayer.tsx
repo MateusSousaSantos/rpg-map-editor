@@ -12,6 +12,7 @@ import { Group, Image, Transformer } from 'react-konva';
 import { useEffect, useState, useRef, memo } from 'react';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
 import { useTextureCache } from '../../stores/textureCache';
+import { usePaletteSwappedImage } from '../../hooks/useRecoloredImage';
 import type { MapLayer, PropInstance } from '../../types/map';
 import { useMapStore } from '../../stores/mapStore';
 import { useHistoryStore } from '../../stores/historyStore';
@@ -112,6 +113,16 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
 
   // Get prop definition
   const definition = propDefinitions.find(def => def.id === prop.definitionId);
+
+  // Palette-swapped canvas (null when not applicable or still loading)
+  const recoloredCanvas = usePaletteSwappedImage(
+    definition?.textureUrl ?? '',
+    definition?.colorSlots,
+    prop.slotHues,
+  );
+
+  // Resolved image source: prefer palette-swapped canvas, fall back to raw HTMLImageElement
+  const renderImage: HTMLCanvasElement | HTMLImageElement | null = recoloredCanvas ?? image;
 
   // Register/unregister group ref
   useEffect(() => {
@@ -259,7 +270,7 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
     });
   };
 
-  if (!definition || !image || !prop.visible) {
+  if (!definition || !renderImage || !prop.visible) {
     return null;
   }
 
@@ -285,7 +296,7 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
     >
       {/* The actual prop image - use definition dimensions for crisp rendering */}
       <Image
-        image={image}
+        image={renderImage}
         width={renderWidth}
         height={renderHeight}
         listening={true}
