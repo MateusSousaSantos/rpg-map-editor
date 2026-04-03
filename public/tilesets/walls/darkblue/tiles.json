@@ -1,0 +1,15 @@
+{
+  "group": "Dark Blue Walls",
+  "groupColor": "#1e3a5f",
+  "type": "wall",
+  "tileSize": 16,
+  "tiles": [
+    {
+      "id": "darkblue-wall",
+      "name": "Dark Blue Wall",
+      "file": "center.png",
+      "autotileGroup": "darkblue_wall",
+      "autotileBasePath": "/tilesets/walls/darkblue/autotile/"
+    }
+  ]
+}

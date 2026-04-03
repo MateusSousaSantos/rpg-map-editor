@@ -7,7 +7,8 @@
     "/tilesets/terrain/ice",
     "/tilesets/terrain/stone",
     "/tilesets/terrain/water",
-    "/tilesets/walls/wood"
+    "/tilesets/walls/wood",
+    "/tilesets/walls/darkblue"
   ],
   "props": [
     "/props"
