@@ -74,23 +74,23 @@ const createOverflowTilesFromDefinition = (
       continue;
     }
 
-    // Check if there's already a parent tile at this position that would generate its own overflows
-    // Iterate through all tile types to see if any parent tile exists there
+    // Check if there's already a tile of the same group at this position (overflow would be redundant)
+    // Only skip if the existing tile belongs to the same group as the overflow being placed
     let existingParentTile = false;
     for (const tileType of ['terrain', 'wall', 'overlay'] as const) {
       const coordKey = `${x},${y},${tileType}`;
       const existingTile = layer.tiles.get(coordKey);
       if (existingTile) {
         const existingDef = map.tileDefinitions.find((def) => def.id === existingTile.definitionId);
-        // If the existing tile has overflowTilesByDirection, it's a parent tile that will handle its own overflows
-        if (existingDef && existingDef.overflowTilesByDirection) {
+        // Only block if the existing tile is the same group as the overflow tile (overflow would be redundant)
+        if (existingDef && existingDef.group && overflowDef.group && existingDef.group === overflowDef.group) {
           existingParentTile = true;
           break;
         }
       }
     }
 
-    // Skip if a parent tile already exists here
+    // Skip if a tile of the same group already covers this position
     if (existingParentTile) {
       continue;
     }

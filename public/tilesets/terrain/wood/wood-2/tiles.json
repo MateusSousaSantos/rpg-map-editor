@@ -1,0 +1,31 @@
+{
+  "group": "Wood",
+  "groupColor": "#38bdf8",
+  "type": "terrain",
+  "tileSize": 32,
+  "tiles": [
+    {
+      "id": "wood2-terrain",
+      "name": "Wood 2",
+      "file": "center.png",
+      "overflowTilesByDirection": {
+        "top":         "wood2-top",
+        "bottom":      "wood2-bottom",
+        "left":        "wood2-left",
+        "right":       "wood2-right",
+        "topLeft":     "wood2-topLeft",
+        "topRight":    "wood2-topRight",
+        "bottomLeft":  "wood2-bottomLeft",
+        "bottomRight": "wood2-bottomRight"
+      }
+    },
+    { "id": "wood2-top",         "name": "Wood 2 Overflow Top",          "file": "top.png",          "type": "overflow" },
+    { "id": "wood2-bottom",      "name": "Wood 2 Overflow Bottom",       "file": "bottom.png",       "type": "overflow" },
+    { "id": "wood2-left",        "name": "Wood 2 Overflow Left",         "file": "left.png",         "type": "overflow" },
+    { "id": "wood2-right",       "name": "Wood 2 Overflow Right",        "file": "right.png",        "type": "overflow" },
+    { "id": "wood2-topLeft",     "name": "Wood 2 Overflow Top-Left",     "file": "top_left.png",     "type": "overflow" },
+    { "id": "wood2-topRight",    "name": "Wood 2 Overflow Top-Right",    "file": "top_right.png",    "type": "overflow" },
+    { "id": "wood2-bottomLeft",  "name": "Wood 2 Overflow Bottom-Left",  "file": "bottom_left.png",  "type": "overflow" },
+    { "id": "wood2-bottomRight", "name": "Wood 2 Overflow Bottom-Right", "file": "bottom_right.png", "type": "overflow" }
+  ]
+}

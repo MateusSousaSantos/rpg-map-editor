@@ -313,7 +313,7 @@ export const TilesTab = () => {
         selectedTileId={currentSelectedTileId}
         onSelectTile={handleSelectTile}
         onDeleteTile={handleDeleteTile}
-        randomBrushEnabled={randomBrushEnabled}
+        randomBrushEnabled={randomBrushEnabled && selectedTileGridType === 'terrain'}
         variantWeights={variantWeights}
         onSetVariantWeight={setVariantWeight}
       />
@@ -324,7 +324,7 @@ export const TilesTab = () => {
         selectedTileId={currentSelectedTileId}
         onSelectTile={handleSelectTile}
         onDeleteTile={handleDeleteTile}
-        randomBrushEnabled={randomBrushEnabled}
+        randomBrushEnabled={randomBrushEnabled && selectedTileGridType === 'wall'}
         variantWeights={variantWeights}
         onSetVariantWeight={setVariantWeight}
       />

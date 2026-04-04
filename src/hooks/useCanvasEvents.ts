@@ -96,7 +96,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     if (randomBrushEnabled) {
       const selectedDef = map.tileDefinitions.find((d) => d.id === selectedTileDefinitionId);
       if (selectedDef?.group) {
-        const groupDefs = map.tileDefinitions.filter((d) => d.group === selectedDef.group && d.type !== 'overflow');
+        const groupDefs = map.tileDefinitions.filter((d) => d.group === selectedDef.group && d.type === selectedDef.type);
         if (groupDefs.length > 1) {
           const weights = variantWeights[selectedDef.group] ?? {};
           resolvedDefId = pickRandomVariant(groupDefs, weights);
@@ -196,7 +196,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     if (randomBrushEnabled) {
       const selectedDef = map.tileDefinitions.find((d) => d.id === selectedTileDefinitionId);
       if (selectedDef?.group) {
-        const candidates = map.tileDefinitions.filter((d) => d.group === selectedDef.group && d.type !== 'overflow');
+        const candidates = map.tileDefinitions.filter((d) => d.group === selectedDef.group && d.type === selectedDef.type);
         if (candidates.length > 1) {
           randomGroupDefs = candidates;
           randomGroupWeights = variantWeights[selectedDef.group] ?? {};
