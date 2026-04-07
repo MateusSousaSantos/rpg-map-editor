@@ -7,14 +7,40 @@ interface ToolbarProps {
 }
 
 export const Toolbar = ({ onExportClick }: ToolbarProps) => {
-  const { activeTool, boxMode, setActiveTool, randomBrushEnabled, setRandomBrushEnabled, selectedTileDefinitionId } = useToolStore();
+  const { activeTool, boxMode, setActiveTool, setBoxMode, randomBrushEnabled, setRandomBrushEnabled, selectedTileDefinitionId } = useToolStore();
   const { undo, redo, canUndo, canRedo } = useHistoryStore();
+
+  const handleToolClick = (tool: 'brush' | 'eraser') => {
+    const correspondingBoxMode = tool === 'brush' ? 'paint' : 'erase';
+    if (activeTool === tool) {
+      // Clicking already-selected tool → deselect
+      setActiveTool('select');
+    } else if (activeTool === 'box') {
+      if (boxMode === correspondingBoxMode) {
+        // Box is same type as clicked tool → switch to that tool
+        setActiveTool(tool);
+      } else {
+        // Box is different type → change box mode
+        setBoxMode(correspondingBoxMode);
+      }
+    } else {
+      setActiveTool(tool);
+    }
+  };
+
+  const handleBoxClick = () => {
+    if (activeTool === 'box') {
+      setActiveTool('select');
+    } else {
+      setActiveTool('box');
+    }
+  };
 
   return (
     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-3 py-2 rounded-full border border-edge bg-panel/95 backdrop-blur-sm shadow-2xl">
       {/* Brush Tool */}
       <button
-        onClick={() => setActiveTool("brush")}
+        onClick={() => handleToolClick("brush")}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
           activeTool === "brush"
             ? "bg-accent text-white"
@@ -28,7 +54,7 @@ export const Toolbar = ({ onExportClick }: ToolbarProps) => {
 
       {/* Eraser Tool */}
       <button
-        onClick={() => setActiveTool("eraser")}
+        onClick={() => handleToolClick("eraser")}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
           activeTool === "eraser"
             ? "bg-danger/20 text-danger"
@@ -42,7 +68,7 @@ export const Toolbar = ({ onExportClick }: ToolbarProps) => {
 
       {/* Box Tool */}
       <button
-        onClick={() => setActiveTool("box")}
+        onClick={handleBoxClick}
         className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
           activeTool === "box"
             ? boxMode === "erase"

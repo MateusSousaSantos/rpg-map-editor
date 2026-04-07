@@ -30,6 +30,7 @@ interface LayerItemProps {
   onToggleLock: (layerId: string) => void;
   onRename: (layerId: string, newName: string) => void;
   onDelete: (layerId: string) => void;
+  onChangeOpacity: (layerId: string, opacity: number) => void;
 }
 
 const LayerItem = ({
@@ -39,6 +40,7 @@ const LayerItem = ({
   onToggleVisibility,
   onToggleLock,
   onRename,
+  onChangeOpacity,
 }: LayerItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(layer.name);
@@ -71,7 +73,7 @@ const LayerItem = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-2 px-2 py-1.5 rounded border transition-all ${
+      className={`group flex items-center gap-2 px-2 py-1.5 rounded border transition-all flex-wrap ${
         isActive
           ? "bg-accent/10 border-accent-light"
           : "bg-raised/50 border-edge hover:border-edge-strong"
@@ -134,6 +136,28 @@ const LayerItem = ({
           {layer.visible ? <FiEye size={13} /> : <FiEyeOff size={13} />}
         </button>
       </div>
+
+      {/* Opacity slider – visible when active */}
+      {isActive && (
+        <div
+          className="flex items-center gap-1.5 w-full mt-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="text-[10px] text-ink-muted shrink-0">Opacity</span>
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={layer.opacity}
+            onChange={(e) => onChangeOpacity(layer.id, parseFloat(e.target.value))}
+            className="flex-1 h-1 accent-accent cursor-pointer"
+          />
+          <span className="text-[10px] text-ink-muted w-7 text-right shrink-0">
+            {Math.round(layer.opacity * 100)}%
+          </span>
+        </div>
+      )}
     </div>
   );
 };
@@ -240,6 +264,7 @@ export const LayersSection = () => {
                 onToggleLock={handleToggleLock}
                 onRename={handleRename}
                 onDelete={handleDelete}
+                onChangeOpacity={(layerId, opacity) => updateLayer(layerId, { opacity })}
               />
             ))}
           </SortableContext>

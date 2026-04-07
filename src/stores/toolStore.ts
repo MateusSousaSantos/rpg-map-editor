@@ -29,6 +29,7 @@ interface ToolState {
 
   // Actions
   setActiveTool: (tool: ToolType) => void;
+  setBoxMode: (mode: 'paint' | 'erase') => void;
   setPickerActive: (active: boolean) => void;
   setSelectedTileDefinition: (defId: string, gridType: TileType) => void;
   setSelectedPropDefinition: (defId: string) => void;
@@ -56,6 +57,9 @@ export const useToolStore = create<ToolState>((set) => ({
       activeTool: tool,
       ...(tool === 'brush' ? { boxMode: 'paint' } : tool === 'eraser' ? { boxMode: 'erase' } : {}),
     })),
+
+  setBoxMode: (mode) =>
+    set(() => ({ boxMode: mode })),
 
   setSelectedTileDefinition: (defId, gridType) =>
     set(() => ({
