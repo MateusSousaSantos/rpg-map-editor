@@ -181,7 +181,7 @@ canvas {
 
 /* ── Public pages ───────────────────────────────────────── */
 
-/* Hero dot grid background */
+/* Dot grid background (vault map cards, new-map preview) */
 .hero-grid-bg {
   background-image: radial-gradient(
     circle,
@@ -189,16 +189,6 @@ canvas {
     transparent 1px
   );
   background-size: 28px 28px;
-}
-
-/* Hero accent glow pulse */
-@keyframes hero-glow-pulse {
-  0%, 100% { opacity: 0.45; }
-  50%       { opacity: 0.75; }
-}
-
-.hero-glow {
-  animation: hero-glow-pulse 4s ease-in-out infinite;
 }
 
 /* Allow text selection on landing / public pages */

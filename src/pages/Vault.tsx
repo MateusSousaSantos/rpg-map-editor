@@ -17,6 +17,25 @@ const MAP_GRADIENTS = [
   "from-rose-900/70 to-canvas",
 ];
 
+const SIZE_PRESETS = [
+  { label: "Small", width: 16, height: 16 },
+  { label: "Medium", width: 32, height: 32 },
+  { label: "Large", width: 64, height: 64 },
+  { label: "Huge", width: 128, height: 128 },
+];
+
+const RATIO_PRESETS = [
+  { label: "1:1", w: 1, h: 1 },
+  { label: "4:3", w: 4, h: 3 },
+  { label: "16:9", w: 16, h: 9 },
+  { label: "3:4", w: 3, h: 4 },
+];
+
+const MIN_SIZE = 1;
+const MAX_SIZE = 256;
+const clampSize = (n: number) =>
+  Math.max(MIN_SIZE, Math.min(MAX_SIZE, Math.round(n) || MIN_SIZE));
+
 function Vault() {
   const navigate = useNavigate();
   const { createMap, loadMapById, deleteMapById, getAllMaps } = useMapStore();
@@ -64,6 +83,15 @@ function Vault() {
       [name]: name === "name" ? value : parseInt(value) || 0,
     }));
   };
+
+  const applyPreset = (width: number, height: number) =>
+    setFormData((prev) => ({ ...prev, width, height }));
+
+  const applyRatio = (w: number, h: number) =>
+    setFormData((prev) => ({
+      ...prev,
+      height: clampSize((prev.width || 32) * (h / w)),
+    }));
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,10 +277,10 @@ function Vault() {
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-panel border border-edge rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+            className="bg-panel border border-edge rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-edge">
               <h2 className="text-lg font-bold text-ink">Create New Map</h2>
               <button
                 onClick={() => setShowModal(false)}
@@ -262,67 +290,145 @@ function Vault() {
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
-                  Map Name
+            <form onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-2">
+              {/* Left: controls */}
+              <div className="p-6 space-y-4 border-b sm:border-b-0 sm:border-r border-edge">
+                <div>
+                  <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
+                    Map Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-raised border border-edge rounded-lg text-ink text-sm focus:outline-none focus:border-accent-light"
+                    placeholder="Untitled Map"
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
+                    Presets
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {SIZE_PRESETS.map((p) => {
+                      const active =
+                        formData.width === p.width && formData.height === p.height;
+                      return (
+                        <button
+                          key={p.label}
+                          type="button"
+                          onClick={() => applyPreset(p.width, p.height)}
+                          className={`px-2 py-2 rounded-lg text-xs font-medium border transition-colors ${
+                            active
+                              ? "bg-accent/15 border-accent/40 text-accent"
+                              : "bg-raised border-edge text-ink-muted hover:text-ink hover:border-edge-strong"
+                          }`}
+                        >
+                          <span className="block">{p.label}</span>
+                          <span className="block text-[10px] opacity-70">
+                            {p.width}×{p.height}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
+                      Width (tiles)
+                    </label>
+                    <input
+                      type="number"
+                      name="width"
+                      value={formData.width}
+                      onChange={handleChange}
+                      min={MIN_SIZE}
+                      max={MAX_SIZE}
+                      className="w-full px-3 py-2 bg-raised border border-edge rounded-lg text-ink text-sm focus:outline-none focus:border-accent-light"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
+                      Height (tiles)
+                    </label>
+                    <input
+                      type="number"
+                      name="height"
+                      value={formData.height}
+                      onChange={handleChange}
+                      min={MIN_SIZE}
+                      max={MAX_SIZE}
+                      className="w-full px-3 py-2 bg-raised border border-edge rounded-lg text-ink text-sm focus:outline-none focus:border-accent-light"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
+                    Aspect ratio
+                  </label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {RATIO_PRESETS.map((r) => (
+                      <button
+                        key={r.label}
+                        type="button"
+                        onClick={() => applyRatio(r.w, r.h)}
+                        className="px-2 py-1.5 rounded-lg text-xs font-medium border border-edge bg-raised text-ink-muted hover:text-ink hover:border-edge-strong transition-colors"
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: live preview */}
+              <div className="p-6 flex flex-col">
+                <label className="block text-xs font-semibold text-ink-secondary mb-2">
+                  Preview
                 </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 bg-raised border border-edge rounded-lg text-ink text-sm focus:outline-none focus:border-accent-light"
-                  placeholder="Untitled Map"
-                  autoFocus
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
-                    Width (tiles)
-                  </label>
-                  <input
-                    type="number"
-                    name="width"
-                    value={formData.width}
-                    onChange={handleChange}
-                    min="1"
-                    max="256"
-                    className="w-full px-3 py-2 bg-raised border border-edge rounded-lg text-ink text-sm focus:outline-none focus:border-accent-light"
+                <div className="flex-1 min-h-40 bg-canvas border border-edge rounded-lg flex items-center justify-center p-4">
+                  <div
+                    className="hero-grid-bg border border-accent/40 bg-accent/5 rounded max-w-full max-h-full"
+                    style={{
+                      aspectRatio: `${clampSize(formData.width)} / ${clampSize(
+                        formData.height
+                      )}`,
+                      width:
+                        formData.width >= formData.height ? "100%" : "auto",
+                      height:
+                        formData.height > formData.width ? "100%" : "auto",
+                    }}
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
-                    Height (tiles)
-                  </label>
-                  <input
-                    type="number"
-                    name="height"
-                    value={formData.height}
-                    onChange={handleChange}
-                    min="1"
-                    max="256"
-                    className="w-full px-3 py-2 bg-raised border border-edge rounded-lg text-ink text-sm focus:outline-none focus:border-accent-light"
-                  />
-                </div>
-              </div>
+                <p className="text-center text-xs text-ink-muted mt-2">
+                  {clampSize(formData.width)}×{clampSize(formData.height)} tiles ·{" "}
+                  {(
+                    clampSize(formData.width) * clampSize(formData.height)
+                  ).toLocaleString()}{" "}
+                  total
+                </p>
 
-              <div className="flex gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2 bg-raised hover:bg-overlay border border-edge text-ink-muted hover:text-ink text-sm font-medium rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-accent hover:bg-accent-light text-white text-sm font-semibold rounded-lg transition-colors"
-                >
-                  Create →
-                </button>
+                <div className="flex gap-3 mt-auto pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2 bg-raised hover:bg-overlay border border-edge text-ink-muted hover:text-ink text-sm font-medium rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 px-4 py-2 bg-accent hover:bg-accent-light text-white text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    Create →
+                  </button>
+                </div>
               </div>
             </form>
           </div>
