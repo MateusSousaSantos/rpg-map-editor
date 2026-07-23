@@ -25,6 +25,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useMapStore } from '../../stores/mapStore';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
 import { useHistoryStore } from '../../stores/historyStore';
+import { useTranslation } from '../../hooks/useTranslation';
 import { CollapsibleSection } from '../RightPanel/CollapsibleSection';
 import type { MapAction } from '../../types/map';
 import { FiEye, FiEyeOff, FiChevronDown, FiChevronRight, FiPackage, FiLayers, FiTrash } from 'react-icons/fi';
@@ -40,6 +41,7 @@ interface PropItemProps {
 }
 
 const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemProps) => {
+  const { t } = useTranslation();
   const updateProp = useMapStore((state) => state.updateProp);
   const propDefinitions = useMapStore((state) => state.map?.propDefinitions || []);
 
@@ -59,7 +61,7 @@ const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemPro
   };
 
   const definition = propDefinitions.find(def => def.id === prop.definitionId);
-  const displayName = prop.name || definition?.name || 'Unnamed Prop';
+  const displayName = prop.name || definition?.name || t('objects.unnamedProp');
 
   const handleClick = (e: React.MouseEvent) => {
     const isMultiSelect = e.ctrlKey || e.metaKey || e.shiftKey;
@@ -110,7 +112,7 @@ const PropItem = ({ prop, layerId, isSelected, onSelect, onDelete }: PropItemPro
           });
         }}
         className="text-ink-muted hover:text-ink transition-colors"
-        title={prop.visible ? 'Hide' : 'Show'}
+        title={prop.visible ? t('objects.hide') : t('objects.show')}
       >
         {prop.visible ? <FiEye size={14} /> : <FiEyeOff size={14} />}
       </button>
@@ -129,6 +131,7 @@ interface LayerPropsGroupProps {
 }
 
 const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
   const { selectedPropIds, selectProps, togglePropSelection } = useUISelectionStore();
   const updateProp = useMapStore((state) => state.updateProp);
@@ -208,7 +211,8 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
           {layer.name}
         </span>
         <span className="text-[10px] text-ink-muted">
-          {layer.props.length} prop{layer.props.length !== 1 ? 's' : ''}
+          {layer.props.length}{' '}
+          {layer.props.length !== 1 ? t('objects.propMany') : t('objects.propOne')}
         </span>
       </button>
 
@@ -254,6 +258,7 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
 };
 
 export const PropsHierarchyContent = () => {
+  const { t } = useTranslation();
   const map = useMapStore((state) => state.map);
 
   if (!map) return null;
@@ -268,14 +273,14 @@ export const PropsHierarchyContent = () => {
 
   return (
     <CollapsibleSection
-      title="Objects"
+      title={t("objects.title")}
       count={totalProps}
       bodyClassName="max-h-56 overflow-y-auto p-2"
     >
       {layersWithProps.length === 0 ? (
         <div className="text-center py-4 text-xs">
           <FiPackage size={24} className="mx-auto mb-1.5 text-ink-muted opacity-50" />
-          <p className="text-ink-muted">No props placed yet</p>
+          <p className="text-ink-muted">{t("objects.noPropsPlaced")}</p>
         </div>
       ) : (
         <div className="space-y-2">

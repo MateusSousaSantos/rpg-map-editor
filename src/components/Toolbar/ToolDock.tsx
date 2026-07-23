@@ -1,5 +1,6 @@
 import { useToolStore } from "../../stores/toolStore";
 import { useHistoryStore } from "../../stores/historyStore";
+import { useTranslation } from "../../hooks/useTranslation";
 import { FiEdit2, FiTrash2, FiSquare, FiDownload, FiRotateCcw, FiRotateCw, FiShuffle } from "react-icons/fi";
 
 interface ToolDockProps {
@@ -9,6 +10,7 @@ interface ToolDockProps {
 export const ToolDock = ({ onExportClick }: ToolDockProps) => {
   const { activeTool, boxMode, setActiveTool, setBoxMode, randomBrushEnabled, setRandomBrushEnabled, selectedTileDefinitionId } = useToolStore();
   const { undo, redo, canUndo, canRedo } = useHistoryStore();
+  const { t } = useTranslation();
 
   const handleToolClick = (tool: 'brush' | 'eraser') => {
     const correspondingBoxMode = tool === 'brush' ? 'paint' : 'erase';
@@ -48,7 +50,7 @@ export const ToolDock = ({ onExportClick }: ToolDockProps) => {
             ? "bg-accent text-white"
             : "text-ink-muted hover:text-ink hover:bg-raised"
         }`}
-        title="Brush Tool (B)"
+        title={t("tools.brush")}
       >
         <FiEdit2 size={18} />
       </button>
@@ -61,7 +63,7 @@ export const ToolDock = ({ onExportClick }: ToolDockProps) => {
             ? "bg-danger/20 text-danger"
             : "text-ink-muted hover:text-ink hover:bg-raised"
         }`}
-        title="Eraser Tool (E)"
+        title={t("tools.eraser")}
       >
         <FiTrash2 size={18} />
       </button>
@@ -76,7 +78,9 @@ export const ToolDock = ({ onExportClick }: ToolDockProps) => {
               : "bg-prop/20 text-prop"
             : "text-ink-muted hover:text-ink hover:bg-raised"
         }`}
-        title={`Box Tool (X) — ${boxMode === "erase" ? "Erase" : "Paint"} mode`}
+        title={t("tools.box", {
+          mode: boxMode === "erase" ? t("tools.modeErase") : t("tools.modePaint"),
+        })}
       >
         <FiSquare size={18} />
         {boxMode === "erase" ? (
@@ -95,7 +99,7 @@ export const ToolDock = ({ onExportClick }: ToolDockProps) => {
             ? "bg-accent text-white"
             : "text-ink-muted hover:text-ink hover:bg-raised"
         }`}
-        title="Random Brush (R) — picks a random variant from the selected tile's group"
+        title={t("tools.randomBrush")}
       >
         <FiShuffle size={18} />
       </button>
@@ -108,7 +112,7 @@ export const ToolDock = ({ onExportClick }: ToolDockProps) => {
         onClick={undo}
         disabled={!canUndo()}
         className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors text-ink-muted hover:text-ink hover:bg-raised disabled:opacity-30 disabled:pointer-events-none"
-        title="Undo (Ctrl+Z)"
+        title={t("tools.undo")}
       >
         <FiRotateCcw size={18} />
       </button>
@@ -118,7 +122,7 @@ export const ToolDock = ({ onExportClick }: ToolDockProps) => {
         onClick={redo}
         disabled={!canRedo()}
         className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors text-ink-muted hover:text-ink hover:bg-raised disabled:opacity-30 disabled:pointer-events-none"
-        title="Redo (Ctrl+Shift+Z)"
+        title={t("tools.redo")}
       >
         <FiRotateCw size={18} />
       </button>
@@ -130,7 +134,7 @@ export const ToolDock = ({ onExportClick }: ToolDockProps) => {
       <button
         onClick={onExportClick}
         className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors text-ok hover:bg-raised"
-        title="Export Map"
+        title={t("tools.exportMap")}
       >
         <FiDownload size={18} />
       </button>

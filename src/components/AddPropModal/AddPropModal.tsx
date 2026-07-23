@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiPlus, FiX, FiUpload } from 'react-icons/fi';
 import { useMapStore } from '../../stores/mapStore';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface AddPropModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ const EMPTY_FORM = {
 };
 
 export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
+  const { t } = useTranslation();
   const map = useMapStore((state) => state.map);
   const addPropDefinition = useMapStore((state) => state.addPropDefinition);
 
@@ -72,7 +74,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file.');
+      setError(t('addProp.errInvalidImage'));
       return;
     }
 
@@ -99,15 +101,15 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
 
   const handleConfirm = () => {
     if (!previewUrl) {
-      setError('Please upload an image.');
+      setError(t('addProp.errImage'));
       return;
     }
     if (!name.trim()) {
-      setError('Name is required.');
+      setError(t('addProp.errName'));
       return;
     }
     if (width <= 0 || height <= 0) {
-      setError('Width and height must be greater than 0.');
+      setError(t('addProp.errSize'));
       return;
     }
 
@@ -146,18 +148,18 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
         className="relative w-104 rounded-2xl border border-edge bg-panel p-6 shadow-2xl"
         role="dialog"
         aria-modal="true"
-        aria-label="Add Prop"
+        aria-label={t('addProp.title')}
       >
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FiPlus className="text-prop" size={18} />
-            <h2 className="text-base font-semibold text-ink">Add Prop</h2>
+            <h2 className="text-base font-semibold text-ink">{t('addProp.title')}</h2>
           </div>
           <button
             onClick={onClose}
             className="rounded-full p-1 text-ink-secondary transition-colors hover:bg-raised hover:text-ink"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <FiX size={16} />
           </button>
@@ -167,7 +169,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
           {/* Image Upload */}
           <div>
             <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-ink-muted">
-              Image
+              {t('addProp.image')}
             </p>
             <input
               ref={fileInputRef}
@@ -181,7 +183,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
               <div
                 className="h-16 w-16 shrink-0 rounded-lg border-2 border-dashed border-edge bg-canvas flex items-center justify-center overflow-hidden cursor-pointer hover:border-prop transition-colors"
                 onClick={() => fileInputRef.current?.click()}
-                title="Click to upload image"
+                title={t('addProp.clickToUpload')}
               >
                 {previewUrl ? (
                   <img
@@ -198,7 +200,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
                 onClick={() => fileInputRef.current?.click()}
                 className="flex-1 rounded-lg border border-edge bg-raised px-3 py-2 text-sm text-ink-secondary hover:bg-overlay hover:text-ink transition-colors text-left"
               >
-                {previewUrl ? 'Change image…' : 'Choose image…'}
+                {previewUrl ? t('addProp.changeImage') : t('addProp.chooseImage')}
               </button>
             </div>
           </div>
@@ -206,13 +208,13 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
           {/* Name */}
           <div>
             <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-muted">
-              Name <span className="text-err normal-case">*</span>
+              {t('addProp.name')} <span className="text-err normal-case">*</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Tree, Barrel, Chest…"
+              placeholder={t('addProp.namePlaceholder')}
               className="w-full rounded-lg border border-edge bg-raised px-3 py-2 text-sm text-ink placeholder-ink-muted focus:border-prop focus:outline-none"
             />
           </div>
@@ -220,7 +222,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
           {/* Tags */}
           <div>
             <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-muted">
-              Tags
+              {t('addProp.tags')}
             </label>
             {/* Selected tag chips */}
             {selectedTags.length > 0 && (
@@ -235,7 +237,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
                       type="button"
                       onClick={() => setSelectedTags((prev) => prev.filter((t) => t !== tag))}
                       className="text-prop/60 hover:text-prop transition-colors"
-                      aria-label={`Remove tag ${tag}`}
+                      aria-label={t('addProp.removeTag', { tag })}
                     >
                       <FiX size={10} />
                     </button>
@@ -258,7 +260,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
                   setTagInput('');
                 }
               }}
-              placeholder="Type a tag and press Enter…"
+              placeholder={t('addProp.tagPlaceholder')}
               className="w-full rounded-lg border border-edge bg-raised px-3 py-2 text-sm text-ink placeholder-ink-muted focus:border-prop focus:outline-none"
             />
             {/* Existing tag suggestions */}
@@ -290,7 +292,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-muted">
-                Width (px)
+                {t('addProp.widthPx')}
               </label>
               <input
                 type="number"
@@ -302,7 +304,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-muted">
-                Height (px)
+                {t('addProp.heightPx')}
               </label>
               <input
                 type="number"
@@ -317,9 +319,9 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
           {/* Group */}
           <div>
             <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-ink-muted">
-              Group
+              {t('addProp.group')}
               <span className="ml-1 font-normal normal-case tracking-normal text-ink-muted">
-                (optional)
+                {t('addProp.optional')}
               </span>
             </label>
             <div className="flex items-center gap-2">
@@ -327,7 +329,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
                 type="text"
                 value={group}
                 onChange={(e) => setGroup(e.target.value)}
-                placeholder="Nature, Furniture…"
+                placeholder={t('addProp.groupPlaceholder')}
                 className="flex-1 rounded-lg border border-edge bg-raised px-3 py-2 text-sm text-ink placeholder-ink-muted focus:border-prop focus:outline-none"
               />
               {group.trim() && (
@@ -337,12 +339,12 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
                     value={groupColor}
                     onChange={(e) => setGroupColor(e.target.value)}
                     className="absolute inset-0 h-full w-full cursor-pointer rounded-lg border border-edge opacity-0"
-                    title="Group color"
+                    title={t('addProp.groupColor')}
                   />
                   <div
                     className="h-full w-full rounded-lg border border-edge cursor-pointer"
                     style={{ background: groupColor }}
-                    title="Group color"
+                    title={t('addProp.groupColor')}
                   />
                 </div>
               )}
@@ -385,7 +387,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
             onClick={onClose}
             className="rounded-lg px-4 py-2 text-sm font-medium text-ink-secondary hover:bg-raised hover:text-ink transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleConfirm}
@@ -393,7 +395,7 @@ export const AddPropModal = ({ isOpen, onClose }: AddPropModalProps) => {
             disabled={!previewUrl || !name.trim()}
           >
             <FiPlus size={14} />
-            Add Prop
+            {t('addProp.title')}
           </button>
         </div>
       </div>

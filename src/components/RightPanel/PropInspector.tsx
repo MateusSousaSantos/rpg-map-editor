@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMapStore } from "../../stores/mapStore";
 import { useUISelectionStore } from "../../stores/uiSelectionStore";
+import { useTranslation } from "../../hooks/useTranslation";
 import { FiTrash2, FiEye, FiEyeOff, FiLock, FiUnlock } from "react-icons/fi";
 import { FaChevronDown } from "react-icons/fa";
 
@@ -13,6 +14,7 @@ export const PropInspector = () => {
   const { selectedPropIds, selectedLayerId, selectionMode } = useUISelectionStore();
   const updateProp = useMapStore((state) => state.updateProp);
   const removeProp = useMapStore((state) => state.removeProp);
+  const { t } = useTranslation();
 
   const [isPropertiesExpanded, setIsPropertiesExpanded] = useState(true);
 
@@ -33,8 +35,8 @@ export const PropInspector = () => {
   if (selectionMode === "props" && selectedPropIds.size > 1) {
     return (
       <div className="p-3">
-        <p className="text-xs text-ink-secondary font-semibold">Multiple Props Selected</p>
-        <p className="text-xs text-ink-muted mt-1">{selectedPropIds.size} props selected</p>
+        <p className="text-xs text-ink-secondary font-semibold">{t("inspector.multipleSelected")}</p>
+        <p className="text-xs text-ink-muted mt-1">{t("inspector.propsSelected", { count: selectedPropIds.size })}</p>
       </div>
     );
   }
@@ -52,7 +54,7 @@ export const PropInspector = () => {
           onClick={() => setIsPropertiesExpanded(!isPropertiesExpanded)}
         >
           <span className="text-xs font-semibold text-ink-secondary hover:text-ink transition-colors">
-            Selected Prop
+            {t("inspector.selectedProp")}
           </span>
           <FaChevronDown
             size={12}
@@ -70,20 +72,20 @@ export const PropInspector = () => {
           <div className="space-y-3">
             {/* Name */}
             <div>
-              <label className="text-xs text-ink-muted block mb-1">Name</label>
+              <label className="text-xs text-ink-muted block mb-1">{t("inspector.name")}</label>
               <div className="text-sm text-ink">{selectedPropDefinition.name}</div>
             </div>
 
             {/* Position */}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs text-ink-muted block mb-1">X</label>
+                <label className="text-xs text-ink-muted block mb-1">{t("inspector.x")}</label>
                 <div className="w-full px-2 py-1 text-sm bg-canvas border border-edge rounded text-ink-secondary">
                   {Math.round(selectedProp.x)}
                 </div>
               </div>
               <div>
-                <label className="text-xs text-ink-muted block mb-1">Y</label>
+                <label className="text-xs text-ink-muted block mb-1">{t("inspector.y")}</label>
                 <div className="w-full px-2 py-1 text-sm bg-canvas border border-edge rounded text-ink-secondary">
                   {Math.round(selectedProp.y)}
                 </div>
@@ -93,13 +95,13 @@ export const PropInspector = () => {
             {/* Size */}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs text-ink-muted block mb-1">Width</label>
+                <label className="text-xs text-ink-muted block mb-1">{t("inspector.width")}</label>
                 <div className="w-full px-2 py-1 text-sm bg-canvas border border-edge rounded text-ink-secondary">
                   {Math.round(selectedProp.width)}
                 </div>
               </div>
               <div>
-                <label className="text-xs text-ink-muted block mb-1">Height</label>
+                <label className="text-xs text-ink-muted block mb-1">{t("inspector.height")}</label>
                 <div className="w-full px-2 py-1 text-sm bg-canvas border border-edge rounded text-ink-secondary">
                   {Math.round(selectedProp.height)}
                 </div>
@@ -108,7 +110,7 @@ export const PropInspector = () => {
 
             {/* Rotation */}
             <div>
-              <label className="text-xs text-ink-muted block mb-1">Rotation</label>
+              <label className="text-xs text-ink-muted block mb-1">{t("inspector.rotation")}</label>
               <div className="w-full px-2 py-1 text-sm bg-canvas border border-edge rounded text-ink-secondary">
                 {Math.round(selectedProp.rotation)}°
               </div>
@@ -117,13 +119,13 @@ export const PropInspector = () => {
             {/* Scale */}
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="text-xs text-ink-muted block mb-1">Scale X</label>
+                <label className="text-xs text-ink-muted block mb-1">{t("inspector.scaleX")}</label>
                 <div className="w-full px-2 py-1 text-sm bg-canvas border border-edge rounded text-ink-secondary">
                   {selectedProp.scaleX.toFixed(2)}
                 </div>
               </div>
               <div>
-                <label className="text-xs text-ink-muted block mb-1">Scale Y</label>
+                <label className="text-xs text-ink-muted block mb-1">{t("inspector.scaleY")}</label>
                 <div className="w-full px-2 py-1 text-sm bg-canvas border border-edge rounded text-ink-secondary">
                   {selectedProp.scaleY.toFixed(2)}
                 </div>
@@ -131,13 +133,13 @@ export const PropInspector = () => {
             </div>
 
             <div className="text-[10px] text-ink-muted bg-raised rounded px-2 py-1.5">
-              💡 Use handles on canvas to resize and rotate
+              💡 {t("inspector.handlesHint")}
             </div>
 
             {/* Opacity */}
             <div>
               <label className="text-xs text-ink-muted block mb-1">
-                Opacity: {Math.round(selectedProp.opacity * 100)}%
+                {t("inspector.opacity")}: {Math.round(selectedProp.opacity * 100)}%
               </label>
               <input
                 type="range"
@@ -156,7 +158,7 @@ export const PropInspector = () => {
 
             {/* Z-Index */}
             <div>
-              <label className="text-xs text-ink-muted block mb-1">Z-Index</label>
+              <label className="text-xs text-ink-muted block mb-1">{t("inspector.zIndex")}</label>
               <input
                 type="number"
                 value={selectedProp.zIndex}
@@ -181,7 +183,7 @@ export const PropInspector = () => {
                     ? "bg-vis/15 border-vis/30 text-vis hover:bg-vis/25"
                     : "bg-raised border-edge text-ink-muted hover:bg-overlay"
                 }`}
-                title={selectedProp.visible ? "Visible" : "Hidden"}
+                title={selectedProp.visible ? t("inspector.visible") : t("inspector.hidden")}
               >
                 {selectedProp.visible ? <FiEye size={15} /> : <FiEyeOff size={15} />}
               </button>
@@ -197,7 +199,7 @@ export const PropInspector = () => {
                     ? "bg-lock/15 border-lock/30 text-lock hover:bg-lock/25"
                     : "bg-raised border-edge text-ink-muted hover:bg-overlay"
                 }`}
-                title={selectedProp.locked ? "Locked" : "Unlocked"}
+                title={selectedProp.locked ? t("inspector.locked") : t("inspector.unlocked")}
               >
                 {selectedProp.locked ? <FiLock size={15} /> : <FiUnlock size={15} />}
               </button>
@@ -209,7 +211,7 @@ export const PropInspector = () => {
               className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-danger/15 border border-danger/30 text-danger rounded hover:bg-danger/25 transition-colors"
             >
               <FiTrash2 size={15} />
-              <span className="text-sm">Delete Prop</span>
+              <span className="text-sm">{t("inspector.deleteProp")}</span>
             </button>
           </div>
         </div>

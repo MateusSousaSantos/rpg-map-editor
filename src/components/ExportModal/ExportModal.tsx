@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { FiDownload, FiX } from 'react-icons/fi';
 import { useMapStore } from '../../stores/mapStore';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
+import { useTranslation } from '../../hooks/useTranslation';
 import { exportMap } from '../../utils/exportMap';
 
 interface ExportModalProps {
@@ -15,6 +16,7 @@ const SCALE_PRESETS = [1, 2, 4] as const;
 export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
   const { map } = useMapStore();
   const { showGrid } = useUISelectionStore();
+  const { t } = useTranslation();
 
   const [format, setFormat] = useState<Format>('png');
   const [scale, setScale] = useState<number>(2);
@@ -77,7 +79,7 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
       await exportMap(format, scale, showGrid);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Export failed');
+      setError(err instanceof Error ? err.message : t('export.failed'));
     } finally {
       setLoading(false);
     }
@@ -97,18 +99,18 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
         className="relative w-96 rounded-2xl border border-edge bg-panel p-6 shadow-2xl"
         role="dialog"
         aria-modal="true"
-        aria-label="Export Map"
+        aria-label={t('export.title')}
       >
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FiDownload className="text-ok" size={18} />
-            <h2 className="text-base font-semibold text-ink">Export Map</h2>
+            <h2 className="text-base font-semibold text-ink">{t('export.title')}</h2>
           </div>
           <button
             onClick={onClose}
             className="rounded-full p-1 text-ink-secondary transition-colors hover:bg-raised hover:text-ink"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <FiX size={16} />
           </button>
@@ -117,7 +119,7 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
         {/* Format */}
         <div className="mb-4">
           <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-ink-muted">
-            Format
+            {t('export.format')}
           </p>
           <div className="flex gap-2">
             {(['png', 'jpeg'] as Format[]).map((f) => (
@@ -139,7 +141,7 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
         {/* Scale */}
         <div className="mb-4">
           <p className="mb-1.5 text-xs font-medium uppercase tracking-wider text-ink-muted">
-            Scale
+            {t('export.scale')}
           </p>
           <div className="flex items-center gap-2">
             {/* Preset buttons */}
@@ -179,13 +181,13 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
 
         {/* Output size preview */}
         <div className="mb-5 rounded-lg border border-edge bg-raised/50 px-4 py-3">
-          <p className="text-xs text-ink-muted">Output size</p>
+          <p className="text-xs text-ink-muted">{t('export.outputSize')}</p>
           <p className="mt-0.5 font-mono text-sm text-ink">
             {outputWidth} × {outputHeight} px
           </p>
           {showGrid && (
             <p className="mt-1 text-xs text-ink-muted">
-              Grid lines will be included
+              {t('export.gridIncluded')}
             </p>
           )}
         </div>
@@ -204,7 +206,7 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
             disabled={loading}
             className="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-ink-secondary transition-colors hover:bg-raised hover:text-ink disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleExport}
@@ -232,12 +234,12 @@ export const ExportModal = ({ isOpen, onClose }: ExportModalProps) => {
                     d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16 8 8 0 01-8-8z"
                   />
                 </svg>
-                Exporting…
+                {t('export.exporting')}
               </>
             ) : (
               <>
                 <FiDownload size={14} />
-                Export
+                {t('export.export')}
               </>
             )}
           </button>

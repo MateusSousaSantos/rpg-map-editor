@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FiDroplet, FiTrash2 } from "react-icons/fi";
 import { useToolStore } from "../../stores/toolStore";
+import { useTranslation } from "../../hooks/useTranslation";
 import { TileTintPopover } from "./TileTintPopover";
 
 /**
@@ -11,6 +12,7 @@ import { TileTintPopover } from "./TileTintPopover";
 export const TileTintBar = () => {
   const { selectedTileColor, customSwatches, setSelectedTileColor, removeSwatch } =
     useToolStore();
+  const { t } = useTranslation();
   const [tintOpen, setTintOpen] = useState(false);
   const tintRef = useRef<HTMLDivElement>(null);
 
@@ -39,14 +41,14 @@ export const TileTintBar = () => {
   return (
     <div className="flex items-center gap-1.5 rounded border border-edge bg-raised/40 px-2 py-1.5">
       <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted shrink-0">
-        Tint
+        {t("tint.label")}
       </span>
 
       {/* Current tint preview */}
       <div
         className="w-5 h-5 rounded border border-edge shrink-0"
         style={{ backgroundColor: selectedTileColor ?? "transparent" }}
-        title={selectedTileColor ?? "No tint (natural texture)"}
+        title={selectedTileColor ?? t("tint.noTintNatural")}
       />
 
       {/* Quick none toggle */}
@@ -57,9 +59,9 @@ export const TileTintBar = () => {
             : "border-edge text-ink-muted hover:text-ink hover:border-edge-strong"
         }`}
         onClick={() => setSelectedTileColor(null)}
-        title="Paint tiles with their natural texture (no tint)"
+        title={t("tint.paintNatural")}
       >
-        None
+        {t("tint.none")}
       </button>
 
       {/* Quick saved swatches */}
@@ -87,7 +89,7 @@ export const TileTintBar = () => {
             removeSwatch(selectedTileColor);
             setSelectedTileColor(null);
           }}
-          title="Remove selected tint from quick access"
+          title={t("tint.removeFromQuick")}
         >
           <FiTrash2 size={13} />
         </button>
@@ -102,7 +104,7 @@ export const TileTintBar = () => {
               : "border-edge text-ink-muted hover:text-ink hover:border-edge-strong"
           }`}
           onClick={() => setTintOpen((o) => !o)}
-          title="Open tint editor"
+          title={t("tint.openEditor")}
         >
           <FiDroplet size={13} />
         </button>

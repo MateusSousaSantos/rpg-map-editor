@@ -1,40 +1,45 @@
 import { Link } from "react-router-dom";
 import { Navbar } from "../components/Layout/Navbar";
 import { FiLayers, FiDownload, FiGrid, FiBox } from "react-icons/fi";
+import { useTranslation } from "../hooks/useTranslation";
+import type { TranslationKey } from "../i18n";
 
-const BENTO_FEATURES = [
+const BENTO_FEATURES: {
+  id: string;
+  titleKey: TranslationKey;
+  descKey: TranslationKey;
+  icon: typeof FiLayers;
+  color: string;
+  bg: string;
+}[] = [
   {
     id: "layers",
-    title: "Edição baseada em Layers",
-    description:
-      "Empilhe camadas ilimitadas de tiles e props. Edição não destrutiva no seu núcleo.",
+    titleKey: "home.features.layers.title",
+    descKey: "home.features.layers.description",
     icon: FiLayers,
     color: "text-accent",
     bg: "bg-accent/10",
   },
   {
     id: "autotile",
-    title: "Autotiling",
-    description:
-      "Coloque o terreno e deixe o motor cuidar das variantes de canto e borda.",
+    titleKey: "home.features.autotile.title",
+    descKey: "home.features.autotile.description",
     icon: FiGrid,
     color: "text-tile-sel",
     bg: "bg-tile-sel/10",
   },
   {
     id: "props",
-    title: "Props & Objetos",
-    description:
-      "Posicione livremente props com z-index, opacidade, rotação e escala.",
+    titleKey: "home.features.props.title",
+    descKey: "home.features.props.description",
     icon: FiBox,
     color: "text-prop",
     bg: "bg-prop/10",
   },
   {
     id: "export",
-    title: "Exportar PNG / JPEG",
-    description:
-      "Exporte mapas em 1x, 2x ou 4x com sobreposição de grade opcional.",
+    titleKey: "home.features.export.title",
+    descKey: "home.features.export.description",
     icon: FiDownload,
     color: "text-ok",
     bg: "bg-ok/10",
@@ -42,6 +47,8 @@ const BENTO_FEATURES = [
 ];
 
 function Home() {
+  const { t } = useTranslation();
+
   return (
     <div className="min-h-screen flex flex-col bg-canvas selectable">
       <Navbar />
@@ -53,21 +60,20 @@ function Home() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/15 border border-accent/20 text-accent text-xs font-medium mb-6">
               <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-              Early Access - v0.0.0
+              {t("home.badge")}
             </div>
             <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-ink leading-tight mb-5">
-              Construa seus mapas de RPG no navegador com o{" "}
-              <span className="text-accent">Ordem Paranormal map editor</span>
+              {t("home.heroPrefix")}
+              <span className="text-accent">{t("home.heroHighlight")}</span>
             </h1>
             <p className="text-ink-secondary text-lg mb-8 leading-relaxed">
-              Feito por um fã de RPG para fãs de RPG. Crie, exporte e
-              compartilhe os mapas das suas campanhas de Ordem.
+              {t("home.heroDescription")}
             </p>
             <Link
               to="/vault"
               className="inline-block px-6 py-3 bg-accent hover:bg-accent-light text-white font-semibold rounded-xl text-sm transition-colors"
             >
-              Abrir meus mapas
+              {t("home.cta")}
             </Link>
           </div>
 
@@ -87,10 +93,10 @@ function Home() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-ink text-sm mb-1">
-                      {feature.title}
+                      {t(feature.titleKey)}
                     </h3>
                     <p className="text-ink-muted text-xs leading-relaxed">
-                      {feature.description}
+                      {t(feature.descKey)}
                     </p>
                   </div>
                 </div>
@@ -102,10 +108,7 @@ function Home() {
 
       {/* Footer */}
       <footer className="mt-auto border-t border-edge px-6 py-6 text-center">
-        <p className="text-ink-muted text-xs">
-          RPG Map Editor - Early Access v0.0.0 - Built with React, Konva and
-          Tailwind CSS
-        </p>
+        <p className="text-ink-muted text-xs">{t("home.footer")}</p>
       </footer>
     </div>
   );

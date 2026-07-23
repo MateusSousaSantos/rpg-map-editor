@@ -1,5 +1,7 @@
 import { Component,  } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
+import { useLanguageStore } from '../stores/languageStore';
+import { translate, type TranslationKey } from '../i18n';
 
 interface Props {
   children: ReactNode;
@@ -47,6 +49,9 @@ class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
+      // Class components can't use hooks; read the current language directly.
+      const t = (key: TranslationKey) =>
+        translate(useLanguageStore.getState().language, key);
       return (
         <div className="flex h-screen w-screen items-center justify-center bg-slate-950">
           <div className="max-w-2xl w-full mx-4 bg-slate-900 border border-red-500/30 rounded-lg p-8 shadow-2xl">
@@ -68,10 +73,10 @@ class ErrorBoundary extends Component<Props, State> {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-red-400">
-                  Oops! Something went wrong
+                  {t('error.title')}
                 </h1>
                 <p className="text-sm text-slate-400 mt-1">
-                  The application encountered an unexpected error
+                  {t('error.subtitle')}
                 </p>
               </div>
             </div>
@@ -80,7 +85,7 @@ class ErrorBoundary extends Component<Props, State> {
               <div className="mb-6">
                 <details className="group">
                   <summary className="cursor-pointer text-sm font-medium text-slate-300 hover:text-slate-200 mb-2">
-                    Error Details
+                    {t('error.details')}
                     <span className="ml-2 text-slate-500 group-open:hidden">▶</span>
                     <span className="ml-2 text-slate-500 hidden group-open:inline">▼</span>
                   </summary>
@@ -103,19 +108,19 @@ class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReset}
                 className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
               >
-                Try Again
+                {t('error.tryAgain')}
               </button>
               <button
                 onClick={this.handleReload}
                 className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium transition-colors"
               >
-                Reload Page
+                {t('error.reloadPage')}
               </button>
             </div>
 
             <div className="mt-4 p-4 bg-slate-800/50 rounded-lg">
               <p className="text-xs text-slate-400">
-                💡 <strong className="text-slate-300">Tip:</strong> If this error persists, try clearing your browser cache or checking the console for more details.
+                💡 <strong className="text-slate-300">{t('error.tipLabel')}</strong> {t('error.tipText')}
               </p>
             </div>
           </div>

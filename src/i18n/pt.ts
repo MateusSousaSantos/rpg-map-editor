@@ -1,0 +1,240 @@
+import type { LocaleDictionary } from "./en";
+
+// Portuguese (pt-BR). Typed as `LocaleDictionary` so the compiler enforces that
+// every key present in the English dictionary also exists here.
+export const pt: LocaleDictionary = {
+  common: {
+    tiles: "tiles",
+    cancel: "Cancelar",
+    close: "Fechar",
+    delete: "Excluir",
+  },
+
+  nav: {
+    home: "Início",
+    myMaps: "Meus Mapas",
+    brand: "RPG Map Editor",
+    language: "Idioma",
+  },
+
+  home: {
+    badge: "Acesso Antecipado - v0.0.0",
+    heroPrefix: "Construa seus mapas de RPG no navegador com o ",
+    heroHighlight: "Ordem Paranormal map editor",
+    heroDescription:
+      "Feito por um fã de RPG para fãs de RPG. Crie, exporte e compartilhe os mapas das suas campanhas de Ordem.",
+    cta: "Abrir meus mapas",
+    footer:
+      "RPG Map Editor - Acesso Antecipado v0.0.0 - Feito com React, Konva e Tailwind CSS",
+    features: {
+      layers: {
+        title: "Edição baseada em Layers",
+        description:
+          "Empilhe camadas ilimitadas de tiles e props. Edição não destrutiva no seu núcleo.",
+      },
+      autotile: {
+        title: "Autotiling",
+        description:
+          "Coloque o terreno e deixe o motor cuidar das variantes de canto e borda.",
+      },
+      props: {
+        title: "Props & Objetos",
+        description:
+          "Posicione livremente props com z-index, opacidade, rotação e escala.",
+      },
+      export: {
+        title: "Exportar PNG / JPEG",
+        description:
+          "Exporte mapas em 1x, 2x ou 4x com sobreposição de grade opcional.",
+      },
+    },
+  },
+
+  vault: {
+    title: "Meus Mapas",
+    noMapsYet: "Nenhum mapa ainda",
+    savedMapOne: "{count} mapa salvo",
+    savedMapMany: "{count} mapas salvos",
+    newMap: "Novo Mapa",
+    searchPlaceholder: "Buscar mapas…",
+    sortNewest: "Mais recentes",
+    sortAZ: "A–Z",
+    noMapsMatch: "Nenhum mapa corresponde à sua busca",
+    createFirstPrompt: "Crie seu primeiro mapa para começar",
+    tryDifferent: "Tente um termo de busca diferente",
+    createFirst: "Criar meu primeiro mapa",
+    deleteMap: "Excluir mapa",
+    createNewMap: "Criar Novo Mapa",
+    mapName: "Nome do Mapa",
+    untitledMap: "Mapa sem título",
+    presets: "Predefinições",
+    sizeSmall: "Pequeno",
+    sizeMedium: "Médio",
+    sizeLarge: "Grande",
+    sizeHuge: "Enorme",
+    widthTiles: "Largura (tiles)",
+    heightTiles: "Altura (tiles)",
+    aspectRatio: "Proporção",
+    preview: "Prévia",
+    total: "total",
+    create: "Criar",
+  },
+
+  tools: {
+    brush: "Pincel (B)",
+    eraser: "Borracha (E)",
+    box: "Caixa (X) — modo {mode}",
+    modePaint: "Pintar",
+    modeErase: "Apagar",
+    randomBrush:
+      "Pincel Aleatório (R) — escolhe uma variante aleatória do grupo do tile selecionado",
+    undo: "Desfazer (Ctrl+Z)",
+    redo: "Refazer (Ctrl+Shift+Z)",
+    exportMap: "Exportar Mapa",
+  },
+
+  canvas: {
+    noMapLoaded: "Nenhum mapa carregado",
+    createOrLoad: "Crie ou carregue um mapa para começar a editar",
+    zoomIn: "Aproximar (+)",
+    zoomOut: "Afastar (-)",
+    resetView: "Redefinir Visão (Ctrl+0)",
+  },
+
+  library: {
+    tabTiles: "Tiles",
+    tabProps: "Props",
+    heading: "Biblioteca",
+    addCustomProp: "Adicionar prop personalizado",
+    noPropsAvailable: "Nenhum prop disponível",
+    other: "Outros",
+    noPropsInGroup: "Nenhum prop neste grupo",
+    noCategoryProps: "Nenhum prop de {category} ainda",
+    dragHint: "Arraste props para o canvas",
+    removeFromLibrary: 'Remover "{name}" da biblioteca',
+    removeAria: "Remover {name}",
+  },
+
+  tiles: {
+    terrain: "Terreno",
+    walls: "Paredes",
+    noTilesInGroup: "Nenhum tile neste grupo",
+    noTilesYet: "Nenhum tile ainda.",
+    noCategoryTiles: "Nenhum tile de {category} ainda",
+    decreaseWeight: "Diminuir peso",
+    increaseWeight: "Aumentar peso",
+    confirmDelete: "Tem certeza de que deseja excluir esta definição de tile?",
+  },
+
+  tint: {
+    label: "Tonalidade",
+    editorTitle: "Tonalidade do Tile",
+    none: "Nenhuma",
+    natural: "natural",
+    noTintNatural: "Sem tonalidade (textura natural)",
+    paintNatural: "Pintar tiles com a textura natural (sem tonalidade)",
+    removeFromQuick: "Remover tonalidade selecionada do acesso rápido",
+    openEditor: "Abrir editor de tonalidade",
+    save: "+ Salvar",
+    saveColor: "Salvar esta cor na sua paleta",
+    lighter: "Mais clara",
+    darker: "Mais escura",
+    hue: "Matiz",
+    saturation: "Saturação",
+    removeFromPalette: "Remover da paleta",
+  },
+
+  inspector: {
+    selectedProp: "Prop Selecionado",
+    multipleSelected: "Vários Props Selecionados",
+    propsSelected: "{count} props selecionados",
+    name: "Nome",
+    x: "X",
+    y: "Y",
+    width: "Largura",
+    height: "Altura",
+    rotation: "Rotação",
+    scaleX: "Escala X",
+    scaleY: "Escala Y",
+    handlesHint: "Use as alças no canvas para redimensionar e rotacionar",
+    opacity: "Opacidade",
+    zIndex: "Z-Index",
+    visible: "Visível",
+    hidden: "Oculto",
+    locked: "Bloqueado",
+    unlocked: "Desbloqueado",
+    deleteProp: "Excluir Prop",
+  },
+
+  objects: {
+    title: "Objetos",
+    unnamedProp: "Prop sem nome",
+    hide: "Ocultar",
+    show: "Mostrar",
+    noPropsPlaced: "Nenhum prop colocado ainda",
+    propOne: "prop",
+    propMany: "props",
+  },
+
+  layers: {
+    title: "Camadas",
+    layerPrefix: "Camada",
+    opacity: "Opacidade",
+    lockLayer: "Bloquear camada",
+    unlockLayer: "Desbloquear camada",
+    hideLayer: "Ocultar camada",
+    showLayer: "Mostrar camada",
+    hideGrid: "Ocultar grade",
+    showGrid: "Mostrar grade",
+    add: "Adicionar",
+    addLayer: "Adicionar camada",
+    remove: "Remover",
+    removeLayer: "Remover camada selecionada",
+    cannotDeleteLast: "Não é possível excluir a última camada!",
+  },
+
+  addProp: {
+    title: "Adicionar Prop",
+    image: "Imagem",
+    clickToUpload: "Clique para enviar imagem",
+    changeImage: "Trocar imagem…",
+    chooseImage: "Escolher imagem…",
+    name: "Nome",
+    namePlaceholder: "Árvore, Barril, Baú…",
+    tags: "Tags",
+    removeTag: "Remover tag {tag}",
+    tagPlaceholder: "Digite uma tag e pressione Enter…",
+    widthPx: "Largura (px)",
+    heightPx: "Altura (px)",
+    group: "Grupo",
+    optional: "(opcional)",
+    groupPlaceholder: "Natureza, Móveis…",
+    groupColor: "Cor do grupo",
+    errInvalidImage: "Selecione um arquivo de imagem válido.",
+    errImage: "Envie uma imagem.",
+    errName: "O nome é obrigatório.",
+    errSize: "A largura e a altura devem ser maiores que 0.",
+  },
+
+  export: {
+    title: "Exportar Mapa",
+    format: "Formato",
+    scale: "Escala",
+    outputSize: "Tamanho de saída",
+    gridIncluded: "As linhas de grade serão incluídas",
+    failed: "Falha ao exportar",
+    exporting: "Exportando…",
+    export: "Exportar",
+  },
+
+  error: {
+    title: "Ops! Algo deu errado",
+    subtitle: "A aplicação encontrou um erro inesperado",
+    details: "Detalhes do Erro",
+    tryAgain: "Tentar Novamente",
+    reloadPage: "Recarregar Página",
+    tipLabel: "Dica:",
+    tipText:
+      "Se este erro persistir, tente limpar o cache do navegador ou verificar o console para mais detalhes.",
+  },
+};

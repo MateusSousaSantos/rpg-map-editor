@@ -5,6 +5,8 @@ import { generateThumbnail } from "../utils/generateThumbnail";
 import { initializeAssets } from "../utils/tilesdefinition";
 import { Navbar } from "../components/Layout/Navbar";
 import { FiPlus, FiTrash2, FiSearch, FiMap } from "react-icons/fi";
+import { useTranslation } from "../hooks/useTranslation";
+import type { TranslationKey } from "../i18n";
 
 type SortMode = "newest" | "az";
 
@@ -17,11 +19,11 @@ const MAP_GRADIENTS = [
   "from-rose-900/70 to-canvas",
 ];
 
-const SIZE_PRESETS = [
-  { label: "Small", width: 16, height: 16 },
-  { label: "Medium", width: 32, height: 32 },
-  { label: "Large", width: 64, height: 64 },
-  { label: "Huge", width: 128, height: 128 },
+const SIZE_PRESETS: { labelKey: TranslationKey; width: number; height: number }[] = [
+  { labelKey: "vault.sizeSmall", width: 16, height: 16 },
+  { labelKey: "vault.sizeMedium", width: 32, height: 32 },
+  { labelKey: "vault.sizeLarge", width: 64, height: 64 },
+  { labelKey: "vault.sizeHuge", width: 128, height: 128 },
 ];
 
 const RATIO_PRESETS = [
@@ -38,17 +40,18 @@ const clampSize = (n: number) =>
 
 function Vault() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { createMap, loadMapById, deleteMapById, getAllMaps } = useMapStore();
 
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>("newest");
   const [showModal, setShowModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: "Untitled Map",
+  const [formData, setFormData] = useState(() => ({
+    name: t("vault.untitledMap"),
     width: 32,
     height: 32,
-  });
+  }));
 
   const allMaps = getAllMaps();
 
@@ -135,11 +138,16 @@ function Vault() {
       <div className="border-b border-edge bg-panel px-6 py-4 shrink-0">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-ink">My Maps</h1>
+            <h1 className="text-xl font-bold text-ink">{t("vault.title")}</h1>
             <p className="text-sm text-ink-muted mt-0.5">
               {allMaps.length === 0
-                ? "No maps yet"
-                : `${allMaps.length} saved map${allMaps.length > 1 ? "s" : ""}`}
+                ? t("vault.noMapsYet")
+                : t(
+                    allMaps.length === 1
+                      ? "vault.savedMapOne"
+                      : "vault.savedMapMany",
+                    { count: allMaps.length },
+                  )}
             </p>
           </div>
           <button
@@ -147,7 +155,7 @@ function Vault() {
             className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-light text-white text-sm font-semibold rounded-lg transition-colors"
           >
             <FiPlus size={16} />
-            New Map
+            {t("vault.newMap")}
           </button>
         </div>
       </div>
@@ -162,7 +170,7 @@ function Vault() {
             />
             <input
               type="text"
-              placeholder="Search maps…"
+              placeholder={t("vault.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-3 py-2 bg-panel border border-edge rounded-lg text-ink text-sm placeholder:text-ink-muted focus:outline-none focus:border-accent-light"
@@ -180,7 +188,7 @@ function Vault() {
                     : "bg-panel text-ink-muted hover:text-ink hover:bg-raised"
                 }`}
               >
-                {s === "newest" ? "Newest" : "A–Z"}
+                {s === "newest" ? t("vault.sortNewest") : t("vault.sortAZ")}
               </button>
             ))}
           </div>
@@ -191,12 +199,14 @@ function Vault() {
           <div className="flex flex-col items-center justify-center py-28 text-center">
             <FiMap size={44} className="text-ink-muted mb-4" />
             <p className="text-ink-secondary font-semibold mb-1">
-              {allMaps.length === 0 ? "No maps yet" : "No maps match your search"}
+              {allMaps.length === 0
+                ? t("vault.noMapsYet")
+                : t("vault.noMapsMatch")}
             </p>
             <p className="text-ink-muted text-sm mb-6">
               {allMaps.length === 0
-                ? "Create your first map to get started"
-                : "Try a different search term"}
+                ? t("vault.createFirstPrompt")
+                : t("vault.tryDifferent")}
             </p>
             {allMaps.length === 0 && (
               <button
@@ -204,7 +214,7 @@ function Vault() {
                 className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-light text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 <FiPlus size={16} />
-                Create your first map
+                {t("vault.createFirst")}
               </button>
             )}
           </div>
@@ -238,20 +248,20 @@ function Vault() {
                           onClick={(e) => handleDeleteConfirm(e, map.id)}
                           className="px-2 py-1 rounded-lg bg-danger text-white text-[10px] font-semibold transition-colors"
                         >
-                          Delete
+                          {t("common.delete")}
                         </button>
                         <button
                           onClick={handleDeleteCancel}
                           className="px-2 py-1 rounded-lg bg-canvas/80 text-ink-muted text-[10px] font-medium transition-colors hover:text-ink"
                         >
-                          Cancel
+                          {t("common.cancel")}
                         </button>
                       </div>
                     ) : (
                       <button
                         onClick={(e) => handleDeleteClick(e, map.id)}
                         className="p-1.5 rounded-lg bg-canvas/80 hover:bg-danger/20 text-ink-muted hover:text-danger transition-colors"
-                        title="Delete map"
+                        title={t("vault.deleteMap")}
                       >
                         <FiTrash2 size={13} />
                       </button>
@@ -264,7 +274,7 @@ function Vault() {
                       {map.name}
                     </p>
                     <p className="text-xs text-ink-muted mt-0.5">
-                      {map.width}×{map.height} tiles ·{" "}
+                      {map.width}×{map.height} {t("common.tiles")} ·{" "}
                       {new Date(map.lastModified).toLocaleDateString()}
                     </p>
                   </div>
@@ -286,7 +296,7 @@ function Vault() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between px-6 py-4 border-b border-edge">
-              <h2 className="text-lg font-bold text-ink">Create New Map</h2>
+              <h2 className="text-lg font-bold text-ink">{t("vault.createNewMap")}</h2>
               <button
                 onClick={() => setShowModal(false)}
                 className="p-1 rounded text-ink-muted hover:text-ink hover:bg-raised transition-colors text-sm"
@@ -300,7 +310,7 @@ function Vault() {
               <div className="p-6 space-y-4 border-b sm:border-b-0 sm:border-r border-edge">
                 <div>
                   <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
-                    Map Name
+                    {t("vault.mapName")}
                   </label>
                   <input
                     type="text"
@@ -308,14 +318,14 @@ function Vault() {
                     value={formData.name}
                     onChange={handleChange}
                     className="w-full px-3 py-2 bg-raised border border-edge rounded-lg text-ink text-sm focus:outline-none focus:border-accent-light"
-                    placeholder="Untitled Map"
+                    placeholder={t("vault.untitledMap")}
                     autoFocus
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
-                    Presets
+                    {t("vault.presets")}
                   </label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {SIZE_PRESETS.map((p) => {
@@ -323,7 +333,7 @@ function Vault() {
                         formData.width === p.width && formData.height === p.height;
                       return (
                         <button
-                          key={p.label}
+                          key={p.labelKey}
                           type="button"
                           onClick={() => applyPreset(p.width, p.height)}
                           className={`px-2 py-2 rounded-lg text-xs font-medium border transition-colors ${
@@ -332,7 +342,7 @@ function Vault() {
                               : "bg-raised border-edge text-ink-muted hover:text-ink hover:border-edge-strong"
                           }`}
                         >
-                          <span className="block">{p.label}</span>
+                          <span className="block">{t(p.labelKey)}</span>
                           <span className="block text-[10px] opacity-70">
                             {p.width}×{p.height}
                           </span>
@@ -345,7 +355,7 @@ function Vault() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
-                      Width (tiles)
+                      {t("vault.widthTiles")}
                     </label>
                     <input
                       type="number"
@@ -359,7 +369,7 @@ function Vault() {
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
-                      Height (tiles)
+                      {t("vault.heightTiles")}
                     </label>
                     <input
                       type="number"
@@ -375,7 +385,7 @@ function Vault() {
 
                 <div>
                   <label className="block text-xs font-semibold text-ink-secondary mb-1.5">
-                    Aspect ratio
+                    {t("vault.aspectRatio")}
                   </label>
                   <div className="grid grid-cols-4 gap-1.5">
                     {RATIO_PRESETS.map((r) => (
@@ -395,7 +405,7 @@ function Vault() {
               {/* Right: live preview */}
               <div className="p-6 flex flex-col">
                 <label className="block text-xs font-semibold text-ink-secondary mb-2">
-                  Preview
+                  {t("vault.preview")}
                 </label>
                 <div className="flex-1 min-h-40 bg-canvas border border-edge rounded-lg flex items-center justify-center p-4">
                   <div
@@ -412,11 +422,12 @@ function Vault() {
                   />
                 </div>
                 <p className="text-center text-xs text-ink-muted mt-2">
-                  {clampSize(formData.width)}×{clampSize(formData.height)} tiles ·{" "}
+                  {clampSize(formData.width)}×{clampSize(formData.height)}{" "}
+                  {t("common.tiles")} ·{" "}
                   {(
                     clampSize(formData.width) * clampSize(formData.height)
                   ).toLocaleString()}{" "}
-                  total
+                  {t("vault.total")}
                 </p>
 
                 <div className="flex gap-3 mt-auto pt-4">
@@ -425,13 +436,13 @@ function Vault() {
                     onClick={() => setShowModal(false)}
                     className="flex-1 px-4 py-2 bg-raised hover:bg-overlay border border-edge text-ink-muted hover:text-ink text-sm font-medium rounded-lg transition-colors"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                   <button
                     type="submit"
                     className="flex-1 px-4 py-2 bg-accent hover:bg-accent-light text-white text-sm font-semibold rounded-lg transition-colors"
                   >
-                    Create →
+                    {t("vault.create")} →
                   </button>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMapStore } from "../../stores/mapStore";
 import { useToolStore } from "../../stores/toolStore";
+import { useTranslation } from "../../hooks/useTranslation";
 import type { BaseTileDefinition, TileType } from "../../types/map";
 import { FaChevronDown, FaChevronLeft } from "react-icons/fa";
 import { TileTintBar } from "./TileTintBar";
@@ -18,6 +19,7 @@ interface TileItemProps {
 }
 
 const TileItem = ({ tile, isSelected, onSelect, showWeightControls, weight = 1, weightPercent = 0, onWeightIncrease, onWeightDecrease }: TileItemProps) => {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center gap-1">
       <div
@@ -48,13 +50,13 @@ const TileItem = ({ tile, isSelected, onSelect, showWeightControls, weight = 1, 
           <button
             onClick={(e) => { e.stopPropagation(); onWeightDecrease?.(); }}
             className="w-5 h-5 flex items-center justify-center rounded bg-raised hover:bg-edge text-ink-muted hover:text-ink text-sm transition-colors"
-            title="Decrease weight"
+            title={t("tiles.decreaseWeight")}
           >−</button>
           <span className="text-[10px] text-ink-muted w-5 text-center">{weight}</span>
           <button
             onClick={(e) => { e.stopPropagation(); onWeightIncrease?.(); }}
             className="w-5 h-5 flex items-center justify-center rounded bg-raised hover:bg-edge text-ink-muted hover:text-ink text-sm transition-colors"
-            title="Increase weight"
+            title={t("tiles.increaseWeight")}
           >+</button>
         </div>
       )}
@@ -74,18 +76,21 @@ const TileGroupBox = ({
   color,
   tileCount,
   onClick,
-}: TileGroupBoxProps) => (
-  <div
-    className="w-5/11 aspect-square rounded border-2 border-slate-500 m-0 flex flex-col cursor-pointer hover:border-tile-sel transition-colors"
-    style={color ? { background: `linear-gradient(45deg, ${color}50, transparent)` } : undefined}
-    onClick={onClick}
-  >
-    <div className="w-full p-1 flex flex-col items-center gap-0.5 min-w-0">
-      <h1 className="text-xl font-semibold text-ink-secondary text-center break-words w-full leading-tight">{label}</h1>
-      <p className="text-xs text-ink-muted whitespace-nowrap shrink-0">{tileCount} tiles</p>
+}: TileGroupBoxProps) => {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="w-5/11 aspect-square rounded border-2 border-slate-500 m-0 flex flex-col cursor-pointer hover:border-tile-sel transition-colors"
+      style={color ? { background: `linear-gradient(45deg, ${color}50, transparent)` } : undefined}
+      onClick={onClick}
+    >
+      <div className="w-full p-1 flex flex-col items-center gap-0.5 min-w-0">
+        <h1 className="text-xl font-semibold text-ink-secondary text-center break-words w-full leading-tight">{label}</h1>
+        <p className="text-xs text-ink-muted whitespace-nowrap shrink-0">{tileCount} {t("common.tiles")}</p>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface TileCategoryProps {
   title: string;
@@ -115,6 +120,7 @@ const TileCategory = ({
   onSelectGroup,
   onBack,
 }: TileCategoryProps) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
 
   // Hide overflow tiles — they are placed automatically, not selected manually
@@ -191,7 +197,7 @@ const TileCategory = ({
           })}
           {groupTiles.length === 0 && (
             <p className="text-xs text-ink-muted py-2">
-              No tiles in this group
+              {t("tiles.noTilesInGroup")}
             </p>
           )}
         </div>
@@ -254,7 +260,7 @@ const TileCategory = ({
         )}
         {visibleTiles.length === 0 && (
           <p className="text-xs text-ink-muted py-2">
-            No {title.toLowerCase()} tiles yet
+            {t("tiles.noCategoryTiles", { category: title.toLowerCase() })}
           </p>
         )}
       </div>
@@ -264,6 +270,7 @@ const TileCategory = ({
 };
 
 export const TilesTab = () => {
+  const { t } = useTranslation();
   const { map, removeTileDefinition } = useMapStore();
   const {
     selectedTileDefinitionId,
@@ -298,7 +305,7 @@ export const TilesTab = () => {
   };
 
   const handleDeleteTile = (tileId: string) => {
-    if (confirm("Are you sure you want to delete this tile definition?")) {
+    if (confirm(t("tiles.confirmDelete"))) {
       removeTileDefinition(tileId);
       if (selectedTileDefinitionId === tileId) setActiveTool("select");
     }
@@ -311,14 +318,14 @@ export const TilesTab = () => {
   if (map.tileDefinitions.length === 0) {
     return (
       <p className="text-xs text-ink-muted text-center py-8 border border-edge rounded">
-        No tiles yet.
+        {t("tiles.noTilesYet")}
       </p>
     );
   }
 
   const categories = [
-    { title: "Terrain", type: "terrain" as TileType, tiles: terrainTiles },
-    { title: "Walls", type: "wall" as TileType, tiles: wallTiles },
+    { title: t("tiles.terrain"), type: "terrain" as TileType, tiles: terrainTiles },
+    { title: t("tiles.walls"), type: "wall" as TileType, tiles: wallTiles },
   ];
 
   // When drilled in, render only the active category; otherwise show both.

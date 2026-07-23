@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useToolStore } from "../../stores/toolStore";
+import { useTranslation } from "../../hooks/useTranslation";
 
 // ── color helpers ───────────────────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ export const TileColorPicker = () => {
     addSwatch,
     removeSwatch,
   } = useToolStore();
+  const { t } = useTranslation();
 
   // HSL is the source of truth for the sliders; the store holds the resulting hex.
   const [hsl, setHsl] = useState(() =>
@@ -95,9 +97,9 @@ export const TileColorPicker = () => {
               : "border-edge text-ink-muted hover:text-ink hover:border-edge-strong"
           }`}
           onClick={() => setSelectedTileColor(null)}
-          title="Paint tiles with their natural texture (no tint)"
+          title={t("tint.paintNatural")}
         >
-          None
+          {t("tint.none")}
         </button>
       </div>
 
@@ -108,14 +110,14 @@ export const TileColorPicker = () => {
           style={{ backgroundColor: selectedTileColor ?? "transparent" }}
         />
         <span className="text-xs text-ink-muted font-mono flex-1">
-          {selectedTileColor ?? "natural"}
+          {selectedTileColor ?? t("tint.natural")}
         </span>
         <button
           className="text-[10px] px-2 py-1 rounded bg-raised hover:bg-edge text-ink-muted hover:text-ink transition-colors"
           onClick={() => addSwatch(currentHex)}
-          title="Save this color to your palette"
+          title={t("tint.saveColor")}
         >
-          + Save
+          {t("tint.save")}
         </button>
       </div>
 
@@ -124,7 +126,7 @@ export const TileColorPicker = () => {
         <button
           className="w-5 h-7 flex items-center justify-center rounded bg-raised hover:bg-edge text-ink-muted hover:text-ink text-sm shrink-0"
           onClick={() => stepLightness(6)}
-          title="Lighter"
+          title={t("tint.lighter")}
         >
           +
         </button>
@@ -146,7 +148,7 @@ export const TileColorPicker = () => {
         <button
           className="w-5 h-7 flex items-center justify-center rounded bg-raised hover:bg-edge text-ink-muted hover:text-ink text-sm shrink-0"
           onClick={() => stepLightness(-6)}
-          title="Darker"
+          title={t("tint.darker")}
         >
           −
         </button>
@@ -165,7 +167,7 @@ export const TileColorPicker = () => {
             background:
               "linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000)",
           }}
-          title="Hue"
+          title={t("tint.hue")}
         />
         {/* Saturation slider */}
         <input
@@ -178,7 +180,7 @@ export const TileColorPicker = () => {
           style={{
             background: `linear-gradient(to right, #ffffff, ${hslToHex(hsl.h, 100, 50)})`,
           }}
-          title="Saturation"
+          title={t("tint.saturation")}
         />
       </div>
 
@@ -203,7 +205,7 @@ export const TileColorPicker = () => {
                   e.stopPropagation();
                   removeSwatch(color);
                 }}
-                title="Remove from palette"
+                title={t("tint.removeFromPalette")}
               >
                 ✕
               </button>

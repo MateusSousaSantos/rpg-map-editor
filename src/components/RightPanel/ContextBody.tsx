@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useToolStore } from "../../stores/toolStore";
 import { useUISelectionStore } from "../../stores/uiSelectionStore";
+import { useTranslation } from "../../hooks/useTranslation";
 import { TilesTab } from "./TilesTab";
 import { PropsLibrary } from "./PropsLibrary";
 import { PropInspector } from "./PropInspector";
@@ -18,6 +19,7 @@ type LibraryTab = "tiles" | "props";
 export const ContextBody = () => {
   const selectionMode = useUISelectionStore((s) => s.selectionMode);
   const selectedPropDefinitionId = useToolStore((s) => s.selectedPropDefinitionId);
+  const { t } = useTranslation();
 
   const [libraryTab, setLibraryTab] = useState<LibraryTab>(
     selectedPropDefinitionId ? "props" : "tiles",
@@ -51,7 +53,7 @@ export const ContextBody = () => {
                 : "text-ink-muted hover:text-ink hover:bg-raised"
             }`}
           >
-            {tab}
+            {tab === "tiles" ? t("library.tabTiles") : t("library.tabProps")}
           </button>
         ))}
       </div>

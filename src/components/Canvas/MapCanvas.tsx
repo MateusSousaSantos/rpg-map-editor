@@ -11,6 +11,7 @@ import { PropLayer } from "./PropLayer";
 import { CursorLayer } from "./CursorLayer";
 import { FiZoomIn, FiZoomOut, FiMaximize2 } from "react-icons/fi";
 import { useCanvasEvents } from "../../hooks/useCanvasEvents";
+import { useTranslation } from "../../hooks/useTranslation";
 import { createProp, getNextZIndex } from "../../utils/props";
 
 interface MapCanvasProps {
@@ -32,6 +33,7 @@ interface MapCanvasProps {
 export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<Konva.Stage>(null);
+  const { t } = useTranslation();
 
   // Canvas dimensions
   const [dimensions, setDimensions] = useState({
@@ -380,8 +382,8 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
     return (
       <div className="flex-1 flex items-center justify-center bg-slate-900">
         <div className="text-center text-gray-500">
-          <p className="text-xl mb-2">No map loaded</p>
-          <p className="text-sm">Create or load a map to start editing</p>
+          <p className="text-xl mb-2">{t("canvas.noMapLoaded")}</p>
+          <p className="text-sm">{t("canvas.createOrLoad")}</p>
         </div>
       </div>
     );
@@ -467,7 +469,7 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
         <button
           onClick={handleZoomIn}
           className="p-2 hover:bg-gray-700 rounded transition-colors"
-          title="Zoom In (+)"
+          title={t("canvas.zoomIn")}
         >
           <FiZoomIn size={20} />
         </button>
@@ -481,7 +483,7 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
         <button
           onClick={handleZoomOut}
           className="p-2 hover:bg-gray-700 rounded transition-colors"
-          title="Zoom Out (-)"
+          title={t("canvas.zoomOut")}
         >
           <FiZoomOut size={20} />
         </button>
@@ -490,7 +492,7 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
         <button
           onClick={handleResetView}
           className="p-2 hover:bg-gray-700 rounded transition-colors border-t"
-          title="Reset View (Ctrl+0)"
+          title={t("canvas.resetView")}
         >
           <FiMaximize2 size={20} />
         </button>

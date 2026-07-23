@@ -18,6 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useMapStore } from "../../stores/mapStore";
 import { useUISelectionStore } from "../../stores/uiSelectionStore";
+import { useTranslation } from "../../hooks/useTranslation";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { FiEye, FiEyeOff, FiLock, FiUnlock, FiGrid } from "react-icons/fi";
 import { FaPlus, FaMinus, FaGripVertical } from "react-icons/fa";
@@ -43,6 +44,7 @@ const LayerItem = ({
   onRename,
   onChangeOpacity,
 }: LayerItemProps) => {
+  const { t } = useTranslation();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(layer.name);
 
@@ -122,7 +124,7 @@ const LayerItem = ({
             onToggleLock(layer.id);
           }}
           className="p-1 rounded hover:bg-overlay text-ink-muted hover:text-ink transition-colors"
-          title={layer.locked ? "Unlock layer" : "Lock layer"}
+          title={layer.locked ? t("layers.unlockLayer") : t("layers.lockLayer")}
         >
           {layer.locked ? <FiLock size={13} /> : <FiUnlock size={13} />}
         </button>
@@ -132,7 +134,7 @@ const LayerItem = ({
             onToggleVisibility(layer.id);
           }}
           className="p-1 rounded hover:bg-overlay text-ink-muted hover:text-ink transition-colors"
-          title={layer.visible ? "Hide layer" : "Show layer"}
+          title={layer.visible ? t("layers.hideLayer") : t("layers.showLayer")}
         >
           {layer.visible ? <FiEye size={13} /> : <FiEyeOff size={13} />}
         </button>
@@ -144,7 +146,7 @@ const LayerItem = ({
           className="flex items-center gap-1.5 w-full mt-1"
           onClick={(e) => e.stopPropagation()}
         >
-          <span className="text-[10px] text-ink-muted shrink-0">Opacity</span>
+          <span className="text-[10px] text-ink-muted shrink-0">{t("layers.opacity")}</span>
           <input
             type="range"
             min={0}
@@ -166,6 +168,7 @@ const LayerItem = ({
 export const LayersSection = () => {
   const { map, addLayer, removeLayer, updateLayer, reorderLayers } = useMapStore();
   const { selectedLayerId, selectLayer, showGrid, toggleGrid } = useUISelectionStore();
+  const { t } = useTranslation();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -188,7 +191,7 @@ export const LayersSection = () => {
   const handleAddLayer = () => {
     const newLayer: MapLayer = {
       id: crypto.randomUUID(),
-      name: `Layer ${map.layers.length + 1}`,
+      name: `${t("layers.layerPrefix")} ${map.layers.length + 1}`,
       type: "tile",
       visible: true,
       opacity: 1,
@@ -217,7 +220,7 @@ export const LayersSection = () => {
 
   const handleDelete = (layerId: string) => {
     if (map.layers.length <= 1) {
-      alert("Cannot delete the last layer!");
+      alert(t("layers.cannotDeleteLast"));
       return;
     }
     removeLayer(layerId);
@@ -232,14 +235,14 @@ export const LayersSection = () => {
           ? "bg-vis/15 text-vis border border-vis/30"
           : "text-ink-muted hover:text-ink hover:bg-raised"
       }`}
-      title={showGrid ? "Hide grid" : "Show grid"}
+      title={showGrid ? t("layers.hideGrid") : t("layers.showGrid")}
     >
       <FiGrid size={13} />
     </button>
   );
 
   return (
-    <CollapsibleSection title="Layers" headerRight={gridToggle}>
+    <CollapsibleSection title={t("layers.title")} headerRight={gridToggle}>
       {/* Layer list */}
       <div className="max-h-56 overflow-y-auto p-2 space-y-1">
         <DndContext
@@ -273,19 +276,19 @@ export const LayersSection = () => {
         <button
           onClick={handleAddLayer}
           className="flex items-center gap-1 px-2 py-1 text-xs bg-raised hover:bg-overlay border border-edge text-ink rounded transition-colors"
-          title="Add layer"
+          title={t("layers.addLayer")}
         >
           <FaPlus size={9} />
-          Add
+          {t("layers.add")}
         </button>
         <button
           onClick={() => selectedLayerId != null && handleDelete(selectedLayerId)}
           disabled={map.layers.length <= 1}
           className="flex items-center gap-1 px-2 py-1 text-xs border rounded transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-danger border-danger/30 hover:bg-danger/15"
-          title="Remove selected layer"
+          title={t("layers.removeLayer")}
         >
           <FaMinus size={9} />
-          Remove
+          {t("layers.remove")}
         </button>
       </div>
     </CollapsibleSection>

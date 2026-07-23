@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useMapStore } from "../../stores/mapStore";
 import { useToolStore } from "../../stores/toolStore";
+import { useTranslation } from "../../hooks/useTranslation";
 import { FiTrash2, FiPlus } from "react-icons/fi";
 import { FaChevronDown, FaChevronLeft } from "react-icons/fa";
 import { AddPropModal } from "../AddPropModal/AddPropModal";
@@ -43,7 +44,9 @@ const PropItem = ({
   onDragEnd,
   onSelect,
   onRemove,
-}: PropItemProps) => (
+}: PropItemProps) => {
+  const { t } = useTranslation();
+  return (
   <div
     draggable
     onDragStart={(e) => onDragStart(e, def.id)}
@@ -73,13 +76,14 @@ const PropItem = ({
         onRemove(def.id);
       }}
       className="absolute top-0.5 right-0.5 z-10 rounded p-0.5 bg-panel/80 text-ink-muted opacity-0 group-hover:opacity-100 hover:bg-danger/20 hover:text-danger transition-all"
-      title={`Remove "${def.name}" from library`}
-      aria-label={`Remove ${def.name}`}
+      title={t("library.removeFromLibrary", { name: def.name })}
+      aria-label={t("library.removeAria", { name: def.name })}
     >
       <FiTrash2 size={10} />
     </button>
   </div>
-);
+  );
+};
 
 interface PropCategoryProps {
   title: string;
@@ -102,6 +106,7 @@ const PropCategory = ({
   onSelect,
   onRemove,
 }: PropCategoryProps) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
@@ -159,7 +164,7 @@ const PropCategory = ({
             />
           ))}
           {groupProps.length === 0 && (
-            <p className="col-span-4 text-xs text-ink-muted py-2">No props in this group</p>
+            <p className="col-span-4 text-xs text-ink-muted py-2">{t("library.noPropsInGroup")}</p>
           )}
         </div>
       </div>
@@ -217,7 +222,7 @@ const PropCategory = ({
           </div>
         )}
         {props.length === 0 && (
-          <p className="text-xs text-ink-muted py-2">No {title.toLowerCase()} props yet</p>
+          <p className="text-xs text-ink-muted py-2">{t("library.noCategoryProps", { category: title.toLowerCase() })}</p>
         )}
       </div>
     </div>
@@ -225,6 +230,7 @@ const PropCategory = ({
 };
 
 export const PropsLibrary = () => {
+  const { t } = useTranslation();
   const map = useMapStore((state) => state.map);
   const { selectedPropDefinitionId, setSelectedPropDefinition } = useToolStore();
   const removePropDefinition = useMapStore((state) => state.removePropDefinition);
@@ -264,21 +270,21 @@ export const PropsLibrary = () => {
       {/* Library header */}
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-ink-secondary">
-          Library
+          {t("library.heading")}
           <span className="ml-1.5 text-ink-muted font-normal">({map.propDefinitions.length})</span>
         </span>
         <button
           onClick={() => setIsAddPropModalOpen(true)}
           className="rounded p-0.5 text-ink-muted hover:bg-raised hover:text-prop transition-colors"
-          title="Add custom prop"
-          aria-label="Add custom prop"
+          title={t("library.addCustomProp")}
+          aria-label={t("library.addCustomProp")}
         >
           <FiPlus size={14} />
         </button>
       </div>
 
       {map.propDefinitions.length === 0 ? (
-        <p className="text-xs text-ink-muted py-2">No props available</p>
+        <p className="text-xs text-ink-muted py-2">{t("library.noPropsAvailable")}</p>
       ) : (
         <div className="space-y-4">
           {sortedTags.map((tag) => (
@@ -296,7 +302,7 @@ export const PropsLibrary = () => {
           ))}
           {uncategorizedProps.length > 0 && (
             <PropCategory
-              title="Other"
+              title={t("library.other")}
               props={uncategorizedProps}
               selectedPropId={selectedPropDefinitionId}
               draggedPropId={draggedPropId}
@@ -308,7 +314,7 @@ export const PropsLibrary = () => {
           )}
         </div>
       )}
-      <p className="text-[10px] text-ink-muted mt-2">💡 Drag props onto the canvas</p>
+      <p className="text-[10px] text-ink-muted mt-2">💡 {t("library.dragHint")}</p>
 
       <AddPropModal isOpen={isAddPropModalOpen} onClose={() => setIsAddPropModalOpen(false)} />
     </div>
