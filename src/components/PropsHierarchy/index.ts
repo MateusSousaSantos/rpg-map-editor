@@ -1,1 +1,1 @@
-export { PropsHierarchy } from './PropsHierarchy';
+export { PropsHierarchyContent } from './PropsHierarchyContent';

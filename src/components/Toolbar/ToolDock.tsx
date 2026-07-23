@@ -2,11 +2,11 @@ import { useToolStore } from "../../stores/toolStore";
 import { useHistoryStore } from "../../stores/historyStore";
 import { FiEdit2, FiTrash2, FiSquare, FiDownload, FiRotateCcw, FiRotateCw, FiShuffle } from "react-icons/fi";
 
-interface ToolbarProps {
+interface ToolDockProps {
   onExportClick: () => void;
 }
 
-export const Toolbar = ({ onExportClick }: ToolbarProps) => {
+export const ToolDock = ({ onExportClick }: ToolDockProps) => {
   const { activeTool, boxMode, setActiveTool, setBoxMode, randomBrushEnabled, setRandomBrushEnabled, selectedTileDefinitionId } = useToolStore();
   const { undo, redo, canUndo, canRedo } = useHistoryStore();
 
@@ -36,40 +36,40 @@ export const Toolbar = ({ onExportClick }: ToolbarProps) => {
     }
   };
 
+  const randomDisabled = activeTool === 'eraser' || !selectedTileDefinitionId;
+
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 px-3 py-2 rounded-full border border-edge bg-panel/95 backdrop-blur-sm shadow-2xl">
+    <aside className="w-14 shrink-0 flex flex-col items-center gap-1 py-3 bg-panel border-r border-edge">
       {/* Brush Tool */}
       <button
         onClick={() => handleToolClick("brush")}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
+        className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
           activeTool === "brush"
             ? "bg-accent text-white"
             : "text-ink-muted hover:text-ink hover:bg-raised"
         }`}
         title="Brush Tool (B)"
       >
-        <FiEdit2 size={16} />
-        <span className="text-xs font-medium">Brush</span>
+        <FiEdit2 size={18} />
       </button>
 
       {/* Eraser Tool */}
       <button
         onClick={() => handleToolClick("eraser")}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
+        className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
           activeTool === "eraser"
             ? "bg-danger/20 text-danger"
             : "text-ink-muted hover:text-ink hover:bg-raised"
         }`}
         title="Eraser Tool (E)"
       >
-        <FiTrash2 size={16} />
-        <span className="text-xs font-medium">Eraser</span>
+        <FiTrash2 size={18} />
       </button>
 
       {/* Box Tool */}
       <button
         onClick={handleBoxClick}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors ${
+        className={`relative flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
           activeTool === "box"
             ? boxMode === "erase"
               ? "bg-danger/20 text-danger"
@@ -78,63 +78,62 @@ export const Toolbar = ({ onExportClick }: ToolbarProps) => {
         }`}
         title={`Box Tool (X) — ${boxMode === "erase" ? "Erase" : "Paint"} mode`}
       >
-        <FiSquare size={16} />
-        <span className="text-xs font-medium">Box</span>
+        <FiSquare size={18} />
         {boxMode === "erase" ? (
-          <FiTrash2 size={10} className="opacity-70" />
+          <FiTrash2 size={9} className="absolute bottom-1 right-1 opacity-70" />
         ) : (
-          <FiEdit2 size={10} className="opacity-70" />
+          <FiEdit2 size={9} className="absolute bottom-1 right-1 opacity-70" />
         )}
       </button>
 
       {/* Random Brush Toggle */}
       <button
         onClick={() => setRandomBrushEnabled(!randomBrushEnabled)}
-        disabled={activeTool === 'eraser' || !selectedTileDefinitionId}
-        className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors disabled:opacity-30 disabled:pointer-events-none ${
+        disabled={randomDisabled}
+        className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none ${
           randomBrushEnabled && selectedTileDefinitionId
             ? "bg-accent text-white"
             : "text-ink-muted hover:text-ink hover:bg-raised"
         }`}
         title="Random Brush (R) — picks a random variant from the selected tile's group"
       >
-        <FiShuffle size={16} />
-        <span className="text-xs font-medium">Random</span>
+        <FiShuffle size={18} />
       </button>
 
       {/* Divider */}
-      <div className="w-px h-5 bg-edge mx-1" />
+      <div className="h-px w-6 bg-edge my-1" />
+
+      {/* Undo */}
       <button
         onClick={undo}
         disabled={!canUndo()}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors text-ink-muted hover:text-ink hover:bg-raised disabled:opacity-30 disabled:pointer-events-none"
+        className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors text-ink-muted hover:text-ink hover:bg-raised disabled:opacity-30 disabled:pointer-events-none"
         title="Undo (Ctrl+Z)"
       >
-        <FiRotateCcw size={16} />
+        <FiRotateCcw size={18} />
       </button>
 
       {/* Redo */}
       <button
         onClick={redo}
         disabled={!canRedo()}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors text-ink-muted hover:text-ink hover:bg-raised disabled:opacity-30 disabled:pointer-events-none"
+        className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors text-ink-muted hover:text-ink hover:bg-raised disabled:opacity-30 disabled:pointer-events-none"
         title="Redo (Ctrl+Shift+Z)"
       >
-        <FiRotateCw size={16} />
+        <FiRotateCw size={18} />
       </button>
 
       {/* Divider */}
-      <div className="w-px h-5 bg-edge mx-1" />
+      <div className="h-px w-6 bg-edge my-1" />
 
       {/* Export */}
       <button
         onClick={onExportClick}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors text-ok hover:bg-raised"
+        className="flex items-center justify-center w-10 h-10 rounded-lg transition-colors text-ok hover:bg-raised"
         title="Export Map"
       >
-        <FiDownload size={16} />
-        <span className="text-xs font-medium">Export</span>
+        <FiDownload size={18} />
       </button>
-    </div>
+    </aside>
   );
 };

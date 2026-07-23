@@ -82,11 +82,21 @@ export const useUISelectionStore = create<UISelectionState>((set) => ({
     }),
   
   selectProps: (propIds) =>
-    set(() => ({
-      selectionMode: 'props',
-      selectedPropIds: new Set(propIds),
-      selectedTileIds: new Set(),
-    })),
+    set((state) => {
+      // An empty selection means "deselect props" — it must not force the panel
+      // into props mode, otherwise the tile library disappears with nothing to show.
+      if (propIds.length === 0) {
+        return {
+          selectedPropIds: new Set(),
+          selectionMode: state.selectionMode === 'props' ? null : state.selectionMode,
+        };
+      }
+      return {
+        selectionMode: 'props',
+        selectedPropIds: new Set(propIds),
+        selectedTileIds: new Set(),
+      };
+    }),
   
   deselectProp: (propId) =>
     set((state) => {

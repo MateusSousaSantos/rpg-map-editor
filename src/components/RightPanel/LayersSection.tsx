@@ -18,6 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useMapStore } from "../../stores/mapStore";
 import { useUISelectionStore } from "../../stores/uiSelectionStore";
+import { CollapsibleSection } from "./CollapsibleSection";
 import { FiEye, FiEyeOff, FiLock, FiUnlock, FiGrid } from "react-icons/fi";
 import { FaPlus, FaMinus, FaGripVertical } from "react-icons/fa";
 import type { MapLayer } from "../../types/map";
@@ -223,28 +224,24 @@ export const LayersSection = () => {
     if (selectedLayerId === layerId) selectLayer(null);
   };
 
-  return (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-edge shrink-0">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-          Layers
-        </span>
-        <button
-          onClick={toggleGrid}
-          className={`p-1.5 rounded transition-colors ${
-            showGrid
-              ? "bg-vis/15 text-vis border border-vis/30"
-              : "text-ink-muted hover:text-ink hover:bg-raised"
-          }`}
-          title={showGrid ? "Hide grid" : "Show grid"}
-        >
-          <FiGrid size={14} />
-        </button>
-      </div>
+  const gridToggle = (
+    <button
+      onClick={toggleGrid}
+      className={`p-1 rounded transition-colors ${
+        showGrid
+          ? "bg-vis/15 text-vis border border-vis/30"
+          : "text-ink-muted hover:text-ink hover:bg-raised"
+      }`}
+      title={showGrid ? "Hide grid" : "Show grid"}
+    >
+      <FiGrid size={13} />
+    </button>
+  );
 
+  return (
+    <CollapsibleSection title="Layers" headerRight={gridToggle}>
       {/* Layer list */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+      <div className="max-h-56 overflow-y-auto p-2 space-y-1">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -272,7 +269,7 @@ export const LayersSection = () => {
       </div>
 
       {/* Controls */}
-      <div className="flex items-center gap-1.5 px-2 py-2 border-t border-edge shrink-0">
+      <div className="flex items-center gap-1.5 px-2 py-2 border-t border-edge">
         <button
           onClick={handleAddLayer}
           className="flex items-center gap-1 px-2 py-1 text-xs bg-raised hover:bg-overlay border border-edge text-ink rounded transition-colors"
@@ -291,6 +288,6 @@ export const LayersSection = () => {
           Remove
         </button>
       </div>
-    </div>
+    </CollapsibleSection>
   );
 };

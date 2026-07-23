@@ -1,5 +1,7 @@
 /**
- * PropsHierarchy - Left sidebar showing all props per layer with drag-to-reorder z-index
+ * PropsHierarchyContent - collapsible "Objects" section listing all placed props
+ * per layer with drag-to-reorder z-index. Rendered inside the right panel below
+ * the layers list.
  */
 
 import { useState } from 'react';
@@ -23,6 +25,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useMapStore } from '../../stores/mapStore';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
 import { useHistoryStore } from '../../stores/historyStore';
+import { CollapsibleSection } from '../RightPanel/CollapsibleSection';
 import type { MapAction } from '../../types/map';
 import { FiEye, FiEyeOff, FiChevronDown, FiChevronRight, FiPackage, FiLayers, FiTrash } from 'react-icons/fi';
 import { FaGripVertical } from 'react-icons/fa';
@@ -250,81 +253,37 @@ const LayerPropsGroup = ({ layer }: LayerPropsGroupProps) => {
   );
 };
 
-export const PropsHierarchy = () => {
+export const PropsHierarchyContent = () => {
   const map = useMapStore((state) => state.map);
-  const [isOpen, setIsOpen] = useState(true);
-  const { clearSelection } = useUISelectionStore();
 
   if (!map) return null;
 
-  // Get layers sorted by depth index
+  // Get layers sorted by depth index (topmost first)
   const sortedLayers = [...map.layers].sort((a, b) => b.depthIndex - a.depthIndex);
 
   // Filter to only show layers that have props
   const layersWithProps = sortedLayers.filter(layer => layer.props.length > 0);
 
-  const handleEmptyClick = (e: React.MouseEvent) => {
-    // Only deselect if clicking directly on the container, not on children
-    if (e.target === e.currentTarget) {
-      clearSelection();
-    }
-  };
+  const totalProps = layersWithProps.reduce((sum, l) => sum + l.props.length, 0);
 
   return (
-    <aside
-      className={`h-full bg-panel border-r border-edge transition-all duration-300 ease-in-out flex flex-col ${
-        isOpen ? 'w-64' : 'w-12'
-      }`}
+    <CollapsibleSection
+      title="Objects"
+      count={totalProps}
+      bodyClassName="max-h-56 overflow-y-auto p-2"
     >
-      {isOpen ? (
-        <>
-          {/* Header */}
-          <div className="h-12 border-b border-edge flex items-center justify-between px-3 bg-panel/80">
-            <h2 className="text-sm font-semibold text-ink">Props Hierarchy</h2>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="p-1.5 rounded hover:bg-raised text-ink-secondary hover:text-ink transition-colors"
-              title="Collapse"
-            >
-              ←
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto p-2" onClick={handleEmptyClick}>
-            {layersWithProps.length === 0 ? (
-              <div className="text-center py-8 text-slate-500 text-xs">
-                <FiPackage size={32} className="mx-auto mb-2 text-ink-muted opacity-50" />
-                <p className="text-ink-muted">No props placed yet</p>
-                <p className="mt-1 text-[10px] text-ink-muted">Use the Prop tool to add props</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {layersWithProps.map((layer) => (
-                  <LayerPropsGroup key={layer.id} layer={layer} />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Footer Info */}
-          <div className="border-t border-edge px-3 py-2 text-[10px] text-ink-muted">
-            <p>💡 Drag to reorder (top = front)</p>
-            <p>Click empty space or press Esc to deselect</p>
-          </div>
-        </>
+      {layersWithProps.length === 0 ? (
+        <div className="text-center py-4 text-xs">
+          <FiPackage size={24} className="mx-auto mb-1.5 text-ink-muted opacity-50" />
+          <p className="text-ink-muted">No props placed yet</p>
+        </div>
       ) : (
-        /* Collapsed state */
-        <div className="flex-1 flex items-center justify-center">
-          <button
-            onClick={() => setIsOpen(true)}
-            className="p-1.5 rounded hover:bg-raised text-ink-secondary hover:text-ink transition-colors"
-            title="Expand Props Hierarchy"
-          >
-            →
-          </button>
+        <div className="space-y-2">
+          {layersWithProps.map((layer) => (
+            <LayerPropsGroup key={layer.id} layer={layer} />
+          ))}
         </div>
       )}
-    </aside>
+    </CollapsibleSection>
   );
 };

@@ -644,6 +644,9 @@ export const useMapStore = create<MapState>()(
           if (!exists) {
             state.map.tileDefinitions.push(definition);
             state.map.lastModified = new Date();
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
           }
         }
       }),
@@ -655,6 +658,9 @@ export const useMapStore = create<MapState>()(
             (d) => d.id !== definitionId
           );
           state.map.lastModified = new Date();
+          if (state.currentMapId) {
+            state.savedMaps.set(state.currentMapId, state.map);
+          }
         }
       }),
 
@@ -665,6 +671,9 @@ export const useMapStore = create<MapState>()(
           if (def) {
             Object.assign(def, changes);
             state.map.lastModified = new Date();
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
           }
         }
       }),
@@ -672,8 +681,14 @@ export const useMapStore = create<MapState>()(
     addPropDefinition: (definition) =>
       set((state) => {
         if (state.map) {
-          state.map.propDefinitions.push(definition);
-          state.map.lastModified = new Date();
+          const exists = state.map.propDefinitions.some(d => d.id === definition.id);
+          if (!exists) {
+            state.map.propDefinitions.push(definition);
+            state.map.lastModified = new Date();
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
+          }
         }
       }),
 
@@ -684,6 +699,9 @@ export const useMapStore = create<MapState>()(
             (d) => d.id !== definitionId
           );
           state.map.lastModified = new Date();
+          if (state.currentMapId) {
+            state.savedMaps.set(state.currentMapId, state.map);
+          }
         }
       }),
 
@@ -694,6 +712,9 @@ export const useMapStore = create<MapState>()(
           if (def) {
             Object.assign(def, changes);
             state.map.lastModified = new Date();
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
           }
         }
       }),

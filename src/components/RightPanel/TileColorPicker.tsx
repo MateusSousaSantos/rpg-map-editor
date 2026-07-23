@@ -86,11 +86,8 @@ export const TileColorPicker = () => {
   const stepLightness = (delta: number) => apply({ l: clamp(hsl.l + delta, 0, 100) });
 
   return (
-    <div className="space-y-2.5 border border-edge rounded p-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-ink-secondary uppercase tracking-wide">
-          Tile Color
-        </span>
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-end">
         <button
           className={`text-[10px] px-1.5 py-0.5 rounded border transition-colors ${
             selectedTileColor === null

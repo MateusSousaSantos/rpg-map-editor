@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { MapCanvas } from "../components/Canvas/MapCanvas";
 import { RightPanel } from "../components/RightPanel/RightPanel";
-import { PropsHierarchy } from "../components/PropsHierarchy";
-import { Toolbar } from "../components/Toolbar/Toolbar";
+import { ToolDock } from "../components/Toolbar/ToolDock";
 import { ExportModal } from "../components/ExportModal/ExportModal";
 import { Navbar } from "../components/Layout/Navbar";
 import { useMapStore } from "../stores/mapStore";
@@ -34,8 +33,8 @@ function App() {
 
       {/* Editor row */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - Props Hierarchy */}
-        <PropsHierarchy />
+        {/* Left vertical tool dock */}
+        <ToolDock onExportClick={() => setExportOpen(true)} />
 
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col bg-canvas min-w-0 relative">
@@ -52,8 +51,6 @@ function App() {
 
           {/* Map Canvas */}
           <MapCanvas editable={true} />
-          {/* Floating Toolbar */}
-          <Toolbar onExportClick={() => setExportOpen(true)} />
         </main>
 
         {/* Right Panel */}

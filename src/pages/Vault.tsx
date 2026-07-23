@@ -101,8 +101,13 @@ function Vault() {
     navigate("/app");
   };
 
-  const handleLoad = (mapId: string) => {
+  const handleLoad = async (mapId: string) => {
     loadMapById(mapId);
+    // Ensure tile/prop definitions are present even for maps saved before
+    // definitions were persisted. addTileDefinition dedupes by id, so this is
+    // a no-op for maps that already have their definitions.
+    const { addTileDefinition, addPropDefinition } = useMapStore.getState();
+    await initializeAssets(addTileDefinition, addPropDefinition);
     navigate("/app");
   };
 

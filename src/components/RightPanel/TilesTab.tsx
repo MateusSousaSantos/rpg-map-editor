@@ -3,7 +3,7 @@ import { useMapStore } from "../../stores/mapStore";
 import { useToolStore } from "../../stores/toolStore";
 import type { BaseTileDefinition, TileType } from "../../types/map";
 import { FaChevronDown, FaChevronLeft } from "react-icons/fa";
-import { TileColorPicker } from "./TileColorPicker";
+import { TileTintBar } from "./TileTintBar";
 
 interface TileItemProps {
   tile: BaseTileDefinition;
@@ -23,13 +23,13 @@ const TileItem = ({ tile, isSelected, onSelect, showWeightControls, weight = 1, 
       <div
         className={`rounded cursor-pointer transition-all ${
           isSelected
-            ? "ring-2 ring-tile-sel border border-tile-sel/50"
+            ? "ring-1 ring-tile-sel border border-edge"
             : "border border-edge hover:border-edge-strong"
         }`}
         onClick={() => onSelect(tile.id, tile.type)}
         title={tile.name}
       >
-        <div className="relative w-14 h-14 bg-canvas rounded overflow-hidden">
+        <div className="relative w-12 h-12 bg-canvas rounded overflow-hidden">
           <img
             src={tile.textureUrl}
             alt={tile.name}
@@ -80,9 +80,9 @@ const TileGroupBox = ({
     style={color ? { background: `linear-gradient(45deg, ${color}50, transparent)` } : undefined}
     onClick={onClick}
   >
-    <div className="w-full p-1 flex items-center justify-around">
-      <h1 className="text-xl font-semibold text-ink-secondary">{label}</h1>
-      <p className="text-xs text-ink-muted">{tileCount} tiles</p>
+    <div className="w-full p-1 flex flex-col items-center gap-0.5 min-w-0">
+      <h1 className="text-xl font-semibold text-ink-secondary text-center break-words w-full leading-tight">{label}</h1>
+      <p className="text-xs text-ink-muted whitespace-nowrap shrink-0">{tileCount} tiles</p>
     </div>
   </div>
 );
@@ -97,6 +97,9 @@ interface TileCategoryProps {
   randomBrushEnabled: boolean;
   variantWeights: Record<string, Record<string, number>>;
   onSetVariantWeight: (group: string, definitionId: string, weight: number) => void;
+  selectedGroup: string | null;
+  onSelectGroup: (group: string) => void;
+  onBack: () => void;
 }
 
 const TileCategory = ({
@@ -108,9 +111,11 @@ const TileCategory = ({
   randomBrushEnabled,
   variantWeights,
   onSetVariantWeight,
+  selectedGroup,
+  onSelectGroup,
+  onBack,
 }: TileCategoryProps) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
   // Hide overflow tiles — they are placed automatically, not selected manually
   const visibleTiles = tiles.filter((t) => t.type !== "overflow");
@@ -149,7 +154,7 @@ const TileCategory = ({
         <div className="flex items-center gap-2">
           <button
             className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors"
-            onClick={() => setSelectedGroup(null)}
+            onClick={onBack}
           >
             <FaChevronLeft size={10} />
             <span className="uppercase tracking-wide font-semibold">
@@ -229,7 +234,7 @@ const TileCategory = ({
               label={groupLabel}
               color={color}
               tileCount={groupTiles.length}
-              onClick={() => setSelectedGroup(groupLabel)}
+              onClick={() => onSelectGroup(groupLabel)}
             />
           ),
         )}
@@ -270,6 +275,12 @@ export const TilesTab = () => {
     setVariantWeight,
   } = useToolStore();
 
+  // Which single group (across both categories) is drilled into. When set, only
+  // that category renders, so the focus is unambiguous.
+  const [drill, setDrill] = useState<{ type: TileType; group: string } | null>(
+    null,
+  );
+
   if (!map) return null;
 
   const terrainTiles = map.tileDefinitions.filter((t) => t.type === "terrain");
@@ -305,31 +316,36 @@ export const TilesTab = () => {
     );
   }
 
+  const categories = [
+    { title: "Terrain", type: "terrain" as TileType, tiles: terrainTiles },
+    { title: "Walls", type: "wall" as TileType, tiles: wallTiles },
+  ];
+
+  // When drilled in, render only the active category; otherwise show both.
+  const visibleCategories = drill
+    ? categories.filter((c) => c.type === drill.type)
+    : categories;
+
   return (
-    <div className="space-y-5">
-      <TileColorPicker />
-      <TileCategory
-        title="Terrain"
-        type="terrain"
-        tiles={terrainTiles}
-        selectedTileId={currentSelectedTileId}
-        onSelectTile={handleSelectTile}
-        onDeleteTile={handleDeleteTile}
-        randomBrushEnabled={randomBrushEnabled && selectedTileGridType === 'terrain'}
-        variantWeights={variantWeights}
-        onSetVariantWeight={setVariantWeight}
-      />
-      <TileCategory
-        title="Walls"
-        type="wall"
-        tiles={wallTiles}
-        selectedTileId={currentSelectedTileId}
-        onSelectTile={handleSelectTile}
-        onDeleteTile={handleDeleteTile}
-        randomBrushEnabled={randomBrushEnabled && selectedTileGridType === 'wall'}
-        variantWeights={variantWeights}
-        onSetVariantWeight={setVariantWeight}
-      />
+    <div className="space-y-4">
+      <TileTintBar />
+      {visibleCategories.map((cat) => (
+        <TileCategory
+          key={cat.type}
+          title={cat.title}
+          type={cat.type}
+          tiles={cat.tiles}
+          selectedTileId={currentSelectedTileId}
+          onSelectTile={handleSelectTile}
+          onDeleteTile={handleDeleteTile}
+          randomBrushEnabled={randomBrushEnabled && selectedTileGridType === cat.type}
+          variantWeights={variantWeights}
+          onSetVariantWeight={setVariantWeight}
+          selectedGroup={drill?.type === cat.type ? drill.group : null}
+          onSelectGroup={(group) => setDrill({ type: cat.type, group })}
+          onBack={() => setDrill(null)}
+        />
+      ))}
     </div>
   );
 };

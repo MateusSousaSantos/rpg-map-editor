@@ -495,14 +495,6 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
           <FiMaximize2 size={20} />
         </button>
       </div>
-
-      {/* Map Info */}
-      <div className="absolute bottom-4 left-4 bg-slate-800 rounded-lg shadow-lg px-3 py-2 text-sm">
-        <div className="font-semibold text-gray-400">{map.name}</div>
-        <div className="text-gray-400 text-xs">
-          {map.width} × {map.height} tiles ({map.tileSize}px)
-        </div>
-      </div>
     </div>
   );
 };
