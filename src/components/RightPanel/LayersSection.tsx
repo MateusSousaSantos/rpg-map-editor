@@ -19,7 +19,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useMapStore } from "../../stores/mapStore";
 import { useUISelectionStore } from "../../stores/uiSelectionStore";
 import { FiEye, FiEyeOff, FiLock, FiUnlock, FiGrid } from "react-icons/fi";
-import { FaPlus, FaMinus, FaCopy, FaGripVertical } from "react-icons/fa";
+import { FaPlus, FaMinus, FaGripVertical } from "react-icons/fa";
 import type { MapLayer } from "../../types/map";
 
 interface LayerItemProps {
@@ -280,14 +280,6 @@ export const LayersSection = () => {
         >
           <FaPlus size={9} />
           Add
-        </button>
-        <button
-          onClick={() => {}}
-          className="flex items-center gap-1 px-2 py-1 text-xs bg-raised hover:bg-overlay border border-edge text-ink rounded transition-colors"
-          title="Duplicate layer"
-        >
-          <FaCopy size={9} />
-          Dupe
         </button>
         <button
           onClick={() => selectedLayerId != null && handleDelete(selectedLayerId)}

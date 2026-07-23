@@ -86,19 +86,15 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
     };
   }, [setPickerActive]);
 
-  // Handle container resize
+  // Handle container resize (covers both window resize and sidebar collapse/expand)
   useEffect(() => {
-    const updateDimensions = () => {
-      if (containerRef.current) {
-        const { clientWidth, clientHeight } = containerRef.current;
-        setDimensions({ width: clientWidth, height: clientHeight });
-      }
-    };
-
-    updateDimensions();
-    window.addEventListener("resize", updateDimensions);
-
-    return () => window.removeEventListener("resize", updateDimensions);
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { inlineSize: width, blockSize: height } = entry.contentBoxSize[0];
+      setDimensions({ width, height });
+    });
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
   }, []);
 
   // Keep the default (centered) pan in sync with map dimensions and container size

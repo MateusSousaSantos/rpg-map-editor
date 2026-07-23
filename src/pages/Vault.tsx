@@ -24,6 +24,7 @@ function Vault() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortMode>("newest");
   const [showModal, setShowModal] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "Untitled Map",
     width: 32,
@@ -77,11 +78,20 @@ function Vault() {
     navigate("/app");
   };
 
-  const handleDelete = (e: React.MouseEvent, mapId: string) => {
+  const handleDeleteClick = (e: React.MouseEvent, mapId: string) => {
     e.stopPropagation();
-    if (confirm("Delete this map? This cannot be undone.")) {
-      deleteMapById(mapId);
-    }
+    setConfirmDelete(mapId);
+  };
+
+  const handleDeleteConfirm = (e: React.MouseEvent, mapId: string) => {
+    e.stopPropagation();
+    deleteMapById(mapId);
+    setConfirmDelete(null);
+  };
+
+  const handleDeleteCancel = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setConfirmDelete(null);
   };
 
   return (
@@ -189,13 +199,30 @@ function Vault() {
 
                   {/* Delete button – visible on hover */}
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={(e) => handleDelete(e, map.id)}
-                      className="p-1.5 rounded-lg bg-canvas/80 hover:bg-danger/20 text-ink-muted hover:text-danger transition-colors"
-                      title="Delete map"
-                    >
-                      <FiTrash2 size={13} />
-                    </button>
+                    {confirmDelete === map.id ? (
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={(e) => handleDeleteConfirm(e, map.id)}
+                          className="px-2 py-1 rounded-lg bg-danger text-white text-[10px] font-semibold transition-colors"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          onClick={handleDeleteCancel}
+                          className="px-2 py-1 rounded-lg bg-canvas/80 text-ink-muted text-[10px] font-medium transition-colors hover:text-ink"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => handleDeleteClick(e, map.id)}
+                        className="p-1.5 rounded-lg bg-canvas/80 hover:bg-danger/20 text-ink-muted hover:text-danger transition-colors"
+                        title="Delete map"
+                      >
+                        <FiTrash2 size={13} />
+                      </button>
+                    )}
                   </div>
 
                   {/* Layer count badge */}

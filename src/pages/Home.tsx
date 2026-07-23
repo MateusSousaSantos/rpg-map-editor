@@ -78,62 +78,6 @@ const BENTO_FEATURES = [
   },
 ];
 
-const COMMUNITY_MAPS = [
-  {
-    id: "1",
-    name: "Dragon's Keep",
-    author: "Pedro",
-    width: 64,
-    height: 48,
-    gradient: "from-indigo-900/80 to-canvas",
-    tags: ["dungeon", "medieval"],
-  },
-  {
-    id: "2",
-    name: "Forest Village",
-    author: "System",
-    width: 32,
-    height: 32,
-    gradient: "from-emerald-900/80 to-canvas",
-    tags: ["outdoor", "village"],
-  },
-  {
-    id: "3",
-    name: "Sea Port Town",
-    author: "System",
-    width: 48,
-    height: 64,
-    gradient: "from-cyan-900/80 to-canvas",
-    tags: ["urban", "water"],
-  },
-  {
-    id: "4",
-    name: "Desert Ruins",
-    author: "System",
-    width: 40,
-    height: 40,
-    gradient: "from-orange-900/80 to-canvas",
-    tags: ["desert", "ruins"],
-  },
-  {
-    id: "5",
-    name: "Mystic Caverns",
-    author: "System",
-    width: 32,
-    height: 24,
-    gradient: "from-violet-900/80 to-canvas",
-    tags: ["cave", "magic"],
-  },
-  {
-    id: "6",
-    name: "Sky Realm",
-    author: "System",
-    width: 64,
-    height: 64,
-    gradient: "from-rose-900/80 to-canvas",
-    tags: ["aerial", "fantasy"],
-  },
-];
 
 function Home() {
   return (
@@ -169,12 +113,6 @@ function Home() {
             >
               Abrir meus mapas
             </Link>
-            <a
-              href="#discover"
-              className="px-6 py-3 bg-raised hover:bg-overlay border border-edge text-ink-secondary hover:text-ink font-medium rounded-xl text-sm transition-colors"
-            >
-              Ver Comunidade
-            </a>
           </div>
         </div>
       </section>
@@ -217,52 +155,6 @@ function Home() {
               </div>
             );
           })}
-        </div>
-      </section>
-
-      {/* Discovery */}
-      <section id="discover" className="px-6 py-20 max-w-5xl mx-auto w-full">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h2 className="text-2xl font-bold text-ink">Mapas da Comunidade</h2>
-            <p className="text-ink-muted text-sm mt-1">
-              Explore mapas compartilhados pela comunidade
-            </p>
-          </div>
-          <span className="px-3 py-1 rounded-full bg-ok/15 border border-ok/30 text-ok text-xs font-medium">
-            Em breve
-          </span>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          {COMMUNITY_MAPS.map((map) => (
-            <div
-              key={map.id}
-              className="rounded-xl border border-edge overflow-hidden opacity-70 cursor-not-allowed"
-            >
-              <div
-                className={`h-32 bg-linear-to-br ${map.gradient} hero-grid-bg relative`}
-              >
-                <div className="absolute inset-0 flex items-end p-3">
-                  <div className="flex gap-1 flex-wrap">
-                    {map.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-1.5 py-0.5 bg-canvas/70 rounded text-[10px] text-ink-secondary"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="p-3 bg-panel">
-                <p className="text-sm font-semibold text-ink">{map.name}</p>
-                <p className="text-xs text-ink-muted mt-0.5">
-                  {map.width}x{map.height} tiles by {map.author}
-                </p>
-              </div>
-            </div>
-          ))}
         </div>
       </section>
 

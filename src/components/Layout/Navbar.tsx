@@ -1,10 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
-import { FiHome, FiFolder, FiSettings } from "react-icons/fi";
+import { FiHome, FiFolder } from "react-icons/fi";
 
 const NAV_LINKS = [
   { path: "/", label: "Home", icon: FiHome },
   { path: "/vault", label: "My Maps", icon: FiFolder },
-  { path: "/settings", label: "Settings", icon: FiSettings },
 ];
 
 export const Navbar = () => {

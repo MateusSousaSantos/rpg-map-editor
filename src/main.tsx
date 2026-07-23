@@ -7,7 +7,6 @@ import ErrorBoundary from './components/ErrorBoundary.tsx'
 import Home from './pages/Home.tsx'
 import App from './pages/App.tsx'
 import Vault from './pages/Vault.tsx'
-import Settings from './pages/Settings.tsx'
 
 // Enable Immer MapSet plugin for Zustand stores using Map/Set
 enableMapSet()
@@ -19,7 +18,6 @@ createRoot(document.getElementById('root')!).render(
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/vault" element={<Vault />} />
-          <Route path="/settings" element={<Settings />} />
           <Route path="/app" element={<App />} />
         </Routes>
       </BrowserRouter>
