@@ -156,8 +156,8 @@ export const CursorLayer = memo(({ tileSize, cursorGridX, cursorGridY, boxPrevie
     );
   }
 
-  // Show cursor for brush tool
-  if (activeTool !== 'brush' || !selectedTileDefinitionId || !map) return null;
+  // Show cursor for brush and fill tools (single-cell tile preview)
+  if ((activeTool !== 'brush' && activeTool !== 'fill') || !selectedTileDefinitionId || !map) return null;
   if (cursorGridX === null || cursorGridY === null) return null;
 
   // Check if cursor is within bounds

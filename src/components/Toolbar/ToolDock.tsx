@@ -2,6 +2,7 @@ import { useToolStore } from "../../stores/toolStore";
 import { useHistoryStore } from "../../stores/historyStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { FiEdit2, FiTrash2, FiSquare, FiDownload, FiRotateCcw, FiRotateCw, FiShuffle } from "react-icons/fi";
+import { FaFillDrip } from "react-icons/fa";
 
 interface ToolDockProps {
   onExportClick: () => void;
@@ -36,6 +37,10 @@ export const ToolDock = ({ onExportClick }: ToolDockProps) => {
     } else {
       setActiveTool('box');
     }
+  };
+
+  const handleFillClick = () => {
+    setActiveTool(activeTool === 'fill' ? 'select' : 'fill');
   };
 
   const randomDisabled = activeTool === 'eraser' || !selectedTileDefinitionId;
@@ -88,6 +93,19 @@ export const ToolDock = ({ onExportClick }: ToolDockProps) => {
         ) : (
           <FiEdit2 size={9} className="absolute bottom-1 right-1 opacity-70" />
         )}
+      </button>
+
+      {/* Fill Tool */}
+      <button
+        onClick={handleFillClick}
+        className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
+          activeTool === "fill"
+            ? "bg-accent text-white"
+            : "text-ink-muted hover:text-ink hover:bg-raised"
+        }`}
+        title={t("tools.fill")}
+      >
+        <FaFillDrip size={16} />
       </button>
 
       {/* Random Brush Toggle */}

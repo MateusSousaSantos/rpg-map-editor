@@ -15,6 +15,19 @@ interface CanvasEventsParams {
 }
 
 /**
+ * Feature flag for the fill tool's matching strategy.
+ *
+ * When `true`, the flood fill matches by tile *group* — e.g. filling over one
+ * "stone" variant replaces every connected stone variant, which is what users
+ * usually expect (especially for regions painted with the random brush).
+ *
+ * Set to `false` to revert to exact-definition matching (only tiles sharing the
+ * clicked tile's exact definition are replaced). Tiles without a group always
+ * fall back to exact-definition matching regardless of this flag.
+ */
+const FILL_MATCH_BY_GROUP = true;
+
+/**
  * useCanvasEvents - Manages all canvas interaction events
  *
  * Handles:
@@ -311,6 +324,139 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
   }, [map, selectedLayerId, isInBounds, getTileAt]);
 
   /**
+   * Handle fill tool - flood-fill the contiguous region of same-identity tiles
+   * (matching definition + tint, or an all-empty region) that touches the
+   * clicked cell, replacing each with the selected tile. 4-directional spread.
+   */
+  const handleFillTool = useCallback((gridX: number, gridY: number) => {
+    if (!map || !selectedTileDefinitionId || !selectedTileGridType) return;
+    if (!isInBounds(gridX, gridY)) return;
+
+    // Get the selected layer, or default to first layer
+    const layer = selectedLayerId
+      ? map.layers.find(l => l.id === selectedLayerId)
+      : map.layers[0];
+    if (!layer || layer.locked) return;
+
+    const targetType = selectedTileGridType as TileType;
+
+    // Identity of the tile being filled from (null definition = empty region)
+    const seedTile = getTileAt(layer.id, gridX, gridY, targetType);
+    const targetDefId = seedTile?.definitionId ?? null;
+    const targetTint = seedTile?.tint ?? null;
+
+    // When group matching is enabled, the fill region is defined by the seed
+    // tile's group (all "stone" variants, say) rather than one exact definition.
+    // Tiles with no group fall back to exact-definition matching.
+    const groupOfDef = (defId: string | null): string | null =>
+      defId ? map.tileDefinitions.find((d) => d.id === defId)?.group ?? null : null;
+    const seedGroup = groupOfDef(targetDefId);
+    const matchByGroup = FILL_MATCH_BY_GROUP && seedGroup !== null;
+
+    const { randomBrushEnabled, variantWeights, selectedTileColor } = useToolStore.getState();
+
+    // Clicking a cell that already holds the exact selected tile is a no-op
+    if (!randomBrushEnabled &&
+        targetDefId === selectedTileDefinitionId &&
+        (targetTint ?? null) === (selectedTileColor ?? null)) {
+      return;
+    }
+
+    // Pre-compute group data for random variant selection (shared across all cells)
+    let randomGroupDefs: typeof map.tileDefinitions | null = null;
+    let randomGroupWeights: Record<string, number> = {};
+    if (randomBrushEnabled) {
+      const selectedDef = map.tileDefinitions.find((d) => d.id === selectedTileDefinitionId);
+      if (selectedDef?.group) {
+        const candidates = map.tileDefinitions.filter((d) => d.group === selectedDef.group && d.type === selectedDef.type);
+        if (candidates.length > 1) {
+          randomGroupDefs = candidates;
+          randomGroupWeights = variantWeights[selectedDef.group] ?? {};
+        }
+      }
+    }
+
+    // A cell belongs to the fill region if its target-type tile shares the seed's
+    // identity — same tint, and either the same group (group matching) or the
+    // same exact definition (exact matching).
+    const matches = (x: number, y: number): boolean => {
+      const tile = getTileAt(layer.id, x, y, targetType);
+      if ((tile?.tint ?? null) !== targetTint) return false;
+      const defId = tile?.definitionId ?? null;
+      return matchByGroup ? groupOfDef(defId) === seedGroup : defId === targetDefId;
+    };
+
+    // BFS over the contiguous matching region. The store is not mutated during
+    // traversal (changes are collected and applied once at the end), so getTileAt
+    // keeps returning the original state and `visited` prevents re-processing.
+    const visited = new Set<string>();
+    const queue: Array<[number, number]> = [[gridX, gridY]];
+    const tilesToAdd: TileInstance[] = [];
+    const tileIdsToRemove: string[] = [];
+    const historyActions: MapAction[] = [];
+
+    while (queue.length > 0) {
+      const [x, y] = queue.shift()!;
+      const key = `${x},${y}`;
+      if (visited.has(key)) continue;
+      if (!isInBounds(x, y)) continue;
+      if (!matches(x, y)) continue;
+      visited.add(key);
+
+      // Resolve variant independently per cell (each cell gets its own random roll)
+      let resolvedDefId = selectedTileDefinitionId;
+      let resolvedType = targetType;
+      if (randomGroupDefs) {
+        resolvedDefId = pickRandomVariant(randomGroupDefs, randomGroupWeights);
+        const resolvedDef = randomGroupDefs.find((d) => d.id === resolvedDefId);
+        if (resolvedDef) resolvedType = resolvedDef.type;
+      }
+
+      // Remove the existing tile of the same type (capture for history)
+      const existingTile = getTileAt(layer.id, x, y, resolvedType);
+      if (existingTile) {
+        tileIdsToRemove.push(existingTile.id);
+        historyActions.push({ type: 'REMOVE_TILE', layerId: layer.id, tileId: existingTile.id, removedTile: { ...existingTile } });
+      }
+
+      // Also remove any overflow tile occupying this cell
+      const existingOverflow = getTileAt(layer.id, x, y, 'overflow');
+      if (existingOverflow) {
+        tileIdsToRemove.push(existingOverflow.id);
+        historyActions.push({ type: 'REMOVE_TILE', layerId: layer.id, tileId: existingOverflow.id, removedTile: { ...existingOverflow } });
+      }
+
+      // Create the new tile
+      const newTile: TileInstance = {
+        id: crypto.randomUUID(),
+        definitionId: resolvedDefId,
+        gridX: x,
+        gridY: y,
+        type: resolvedType,
+        ...(selectedTileColor ? { tint: selectedTileColor } : {}),
+      };
+      tilesToAdd.push(newTile);
+      historyActions.push({ type: 'ADD_TILE', layerId: layer.id, tile: { ...newTile } });
+
+      // Enqueue orthogonal neighbors
+      queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+    }
+
+    // Batch operations for better performance
+    if (tileIdsToRemove.length > 0) {
+      useMapStore.getState().batchRemoveTiles(layer.id, tileIdsToRemove);
+    }
+    if (tilesToAdd.length > 0) {
+      useMapStore.getState().batchAddTiles(layer.id, tilesToAdd);
+    }
+
+    // Record as single history action
+    if (historyActions.length > 0) {
+      useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
+    }
+  }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTileAt]);
+
+  /**
    * Handle selection tool - select tiles or props
    */
   const handleSelectionTool = useCallback((gridX: number, gridY: number, worldX: number, worldY: number, isMultiSelect: boolean) => {
@@ -464,11 +610,14 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       case 'box':
         boxStartRef.current = { x: gridX, y: gridY };
         break;
+      case 'fill':
+        handleFillTool(gridX, gridY);
+        break;
       case 'place-prop':
         handlePlacePropTool(worldX, worldY);
         break;
     }
-  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handlePlacePropTool, handlePickerTool]);
+  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handleFillTool, handlePlacePropTool, handlePickerTool]);
 
   /**
    * Handle mouse move event (for drag drawing)
@@ -583,11 +732,14 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       case 'box':
         boxStartRef.current = { x: gridX, y: gridY };
         break;
+      case 'fill':
+        handleFillTool(gridX, gridY);
+        break;
       case 'place-prop':
         handlePlacePropTool(worldX, worldY);
         break;
     }
-  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handlePlacePropTool]);
+  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handleFillTool, handlePlacePropTool]);
 
   /**
    * Handle touch move — single finger only; mirrors handleMouseMove

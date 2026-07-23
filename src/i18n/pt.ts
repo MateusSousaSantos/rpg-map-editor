@@ -84,6 +84,7 @@ export const pt: LocaleDictionary = {
     brush: "Pincel (B)",
     eraser: "Borracha (E)",
     box: "Caixa (X) — modo {mode}",
+    fill: "Balde de Tinta (G)",
     modePaint: "Pintar",
     modeErase: "Apagar",
     randomBrush:

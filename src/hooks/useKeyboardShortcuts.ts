@@ -150,6 +150,11 @@ export const useKeyboardShortcuts = () => {
         const store = useToolStore.getState();
         store.setRandomBrushEnabled(!store.randomBrushEnabled);
       }
+      if ((e.key === 'g' || e.key === 'G') && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        const store = useToolStore.getState();
+        store.setActiveTool(store.activeTool === 'fill' ? 'select' : 'fill');
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);

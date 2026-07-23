@@ -84,6 +84,7 @@ export const en = {
     brush: "Brush Tool (B)",
     eraser: "Eraser Tool (E)",
     box: "Box Tool (X) — {mode} mode",
+    fill: "Fill Tool (G)",
     modePaint: "Paint",
     modeErase: "Erase",
     randomBrush:
