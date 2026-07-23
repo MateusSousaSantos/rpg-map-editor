@@ -176,19 +176,19 @@ function Vault() {
             )}
           </div>
         ) : (
-          /* Map card grid */
-          <div className="grid grid-cols-3 gap-4">
-            {filteredMaps.map((map, i) => (
-              <div
-                key={map.id}
-                onClick={() => handleLoad(map.id)}
-                className="group rounded-xl border border-edge hover:border-accent/50 overflow-hidden cursor-pointer transition-all hover:shadow-lg"
-              >
-                {/* Thumbnail */}
+          /* Pinterest-style masonry wall */
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
+            {filteredMaps.map((map, i) => {
+              // Preserve each map's real proportions, clamped to 3:1 … 1:3
+              const ratio = Math.min(3, Math.max(1 / 3, map.width / map.height));
+              return (
                 <div
-                  className={`h-28 bg-vault-to-br ${MAP_GRADIENTS[i % MAP_GRADIENTS.length]} hero-grid-bg relative`}
+                  key={map.id}
+                  onClick={() => handleLoad(map.id)}
+                  style={{ aspectRatio: String(ratio) }}
+                  className={`group relative mb-4 break-inside-avoid rounded-xl border border-edge hover:border-accent/50 overflow-hidden cursor-pointer transition-all hover:shadow-lg bg-vault-to-br ${MAP_GRADIENTS[i % MAP_GRADIENTS.length]} hero-grid-bg`}
                 >
-                  {/* Rendered map snapshot */}
+                  {/* Rendered map snapshot fills the whole card */}
                   {map.thumbnail && (
                     <img
                       src={map.thumbnail}
@@ -197,7 +197,7 @@ function Vault() {
                     />
                   )}
 
-                  {/* Delete button – visible on hover */}
+                  {/* Delete button – hidden until hover */}
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     {confirmDelete === map.id ? (
                       <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -225,27 +225,19 @@ function Vault() {
                     )}
                   </div>
 
-                  {/* Layer count badge */}
-                  <div className="absolute bottom-2 left-2">
-                    <span className="px-1.5 py-0.5 rounded bg-canvas/70 text-ink-muted text-[10px]">
-                      {map.layers.length} layer
-                      {map.layers.length !== 1 ? "s" : ""}
-                    </span>
+                  {/* Name + info – floats in on hover */}
+                  <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-canvas/90 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    <p className="font-semibold text-ink text-sm truncate">
+                      {map.name}
+                    </p>
+                    <p className="text-xs text-ink-muted mt-0.5">
+                      {map.width}×{map.height} tiles ·{" "}
+                      {new Date(map.lastModified).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
-
-                {/* Info row */}
-                <div className="p-3 bg-panel">
-                  <p className="font-semibold text-ink text-sm truncate">
-                    {map.name}
-                  </p>
-                  <p className="text-xs text-ink-muted mt-0.5">
-                    {map.width}×{map.height} tiles ·{" "}
-                    {new Date(map.lastModified).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
