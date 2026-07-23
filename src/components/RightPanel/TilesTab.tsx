@@ -3,6 +3,7 @@ import { useMapStore } from "../../stores/mapStore";
 import { useToolStore } from "../../stores/toolStore";
 import type { BaseTileDefinition, TileType } from "../../types/map";
 import { FaChevronDown, FaChevronLeft } from "react-icons/fa";
+import { TileColorPicker } from "./TileColorPicker";
 
 interface TileItemProps {
   tile: BaseTileDefinition;
@@ -306,6 +307,7 @@ export const TilesTab = () => {
 
   return (
     <div className="space-y-5">
+      <TileColorPicker />
       <TileCategory
         title="Terrain"
         type="terrain"

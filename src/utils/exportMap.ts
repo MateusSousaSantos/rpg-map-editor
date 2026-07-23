@@ -2,6 +2,7 @@ import type { BaseTileDefinition, OverlayTileDefinition, PropDefinition, PropIns
 import { useMapStore } from '../stores/mapStore';
 import { useTextureCache } from '../stores/textureCache';
 import { isAutotileEnabled, computeBlobBitmask, resolveAutotileTexturePath } from './autotiling';
+import { getTintedTile } from './tint';
 
 /**
  * Renders the full map (all visible layers) to an off-screen canvas and
@@ -221,17 +222,9 @@ export function drawTile(
     ctx.translate(-cx, -cy);
   }
 
-  if (tile.tint) {
-    const r = parseInt(tile.tint.slice(1, 3), 16);
-    const g = parseInt(tile.tint.slice(3, 5), 16);
-    const b = parseInt(tile.tint.slice(5, 7), 16);
-
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-    ctx.fillRect(x, y, size, size);
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.drawImage(texture, x, y, size, size);
-    ctx.globalCompositeOperation = 'source-over';
+  const tinted = tile.tint ? getTintedTile(texture, size, size, tile.tint) : null;
+  if (tinted) {
+    ctx.drawImage(tinted, x, y, size, size);
   } else {
     ctx.drawImage(texture, x, y, size, size);
   }
@@ -265,18 +258,9 @@ export function drawProp(
     ctx.rotate((rotation * Math.PI) / 180);
   }
 
-  if (prop.tint) {
-    const r = parseInt(prop.tint.slice(1, 3), 16);
-    const g = parseInt(prop.tint.slice(3, 5), 16);
-    const b = parseInt(prop.tint.slice(5, 7), 16);
-
-    ctx.drawImage(texture, 0, 0, w, h);
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-    ctx.fillRect(0, 0, w, h);
-    ctx.globalCompositeOperation = 'destination-in';
-    ctx.drawImage(texture, 0, 0, w, h);
-    ctx.globalCompositeOperation = 'source-over';
+  const tinted = prop.tint ? getTintedTile(texture, w, h, prop.tint) : null;
+  if (tinted) {
+    ctx.drawImage(tinted, 0, 0, w, h);
   } else {
     ctx.drawImage(texture, 0, 0, w, h);
   }

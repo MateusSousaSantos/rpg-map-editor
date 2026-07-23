@@ -89,7 +89,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     if (!layer || layer.locked) return;
 
     // Resolve variant (may be a random pick from the selected tile's group)
-    const { randomBrushEnabled, variantWeights } = useToolStore.getState();
+    const { randomBrushEnabled, variantWeights, selectedTileColor } = useToolStore.getState();
     let resolvedDefId = selectedTileDefinitionId;
     let resolvedType = selectedTileGridType as TileType;
 
@@ -109,10 +109,12 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     // Check if tile already exists at this position for this type
     const existingTile = getTileAt(layer.id, gridX, gridY, resolvedType);
 
-    // Don't place if same tile already exists
+    // Don't place if the exact same tile (incl. tint) already exists —
+    // a different selected color falls through so painting recolors the tile
     if (existingTile &&
         existingTile.definitionId === resolvedDefId &&
-        existingTile.type === resolvedType) {
+        existingTile.type === resolvedType &&
+        (existingTile.tint ?? null) === selectedTileColor) {
       return;
     }
 
@@ -136,6 +138,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       gridX,
       gridY,
       type: resolvedType,
+      ...(selectedTileColor ? { tint: selectedTileColor } : {}),
     };
 
     addTile(layer.id, newTile);
@@ -190,7 +193,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     const historyActions: MapAction[] = [];
 
     // Pre-compute group data for random variant selection (shared across all cells)
-    const { randomBrushEnabled, variantWeights } = useToolStore.getState();
+    const { randomBrushEnabled, variantWeights, selectedTileColor } = useToolStore.getState();
     let randomGroupDefs: typeof map.tileDefinitions | null = null;
     let randomGroupWeights: Record<string, number> = {};
     if (randomBrushEnabled) {
@@ -240,6 +243,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
           gridX: x,
           gridY: y,
           type: resolvedType,
+          ...(selectedTileColor ? { tint: selectedTileColor } : {}),
         };
 
         tilesToAdd.push(newTile);

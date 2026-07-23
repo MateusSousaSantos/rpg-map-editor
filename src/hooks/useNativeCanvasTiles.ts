@@ -3,6 +3,7 @@ import type { MapLayer, TileInstance, BaseTileDefinition, OverlayTileDefinition 
 import { useTextureCache } from '../stores/textureCache';
 import { useViewportStore } from '../stores/viewportStore';
 import { isAutotileEnabled, computeBlobBitmask, resolveAutotileTexturePath } from '../utils/autotiling';
+import { getTintedTile } from '../utils/tint';
 
 interface UseNativeCanvasTilesProps {
   layer: MapLayer;
@@ -275,20 +276,10 @@ export const useNativeCanvasTiles = ({
         ctx.translate(-centerX, -centerY);
       }
 
-      // Apply color tint if specified
-      if (tile.tint) {
-        // Parse hex color
-        const r = parseInt(tile.tint.slice(1, 3), 16);
-        const g = parseInt(tile.tint.slice(3, 5), 16);
-        const b = parseInt(tile.tint.slice(5, 7), 16);
-
-        // Draw with color tint using multiply blend
-        ctx.globalCompositeOperation = 'multiply';
-        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-        ctx.fillRect(x, y, tileSize, tileSize);
-        ctx.globalCompositeOperation = 'destination-in';
-        ctx.drawImage(texture, x, y, tileSize, tileSize);
-        ctx.globalCompositeOperation = 'source-over';
+      // Apply color tint if specified (composited on an isolated canvas)
+      const tinted = tile.tint ? getTintedTile(texture, tileSize, tileSize, tile.tint) : null;
+      if (tinted) {
+        ctx.drawImage(tinted, x, y, tileSize, tileSize);
       } else {
         // Draw normally
         ctx.drawImage(texture, x, y, tileSize, tileSize);
