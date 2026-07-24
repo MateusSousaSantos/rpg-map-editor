@@ -151,3 +151,4 @@ Small wins that make daily editing pleasant:
 ---
 
 *Add ideas freely. Keep entries grounded in the actual stores/layers so they stay implementable.*
+

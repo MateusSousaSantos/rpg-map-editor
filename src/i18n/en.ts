@@ -94,6 +94,10 @@ export const en = {
     exportMap: "Export Map",
   },
 
+  editor: {
+    renameMap: "Rename map",
+  },
+
   canvas: {
     noMapLoaded: "No map loaded",
     createOrLoad: "Create or load a map to start editing",
@@ -114,6 +118,9 @@ export const en = {
     dragHint: "Drag props onto the canvas",
     removeFromLibrary: 'Remove "{name}" from library',
     removeAria: "Remove {name}",
+    searchPlaceholder: "Search props…",
+    noSearchResults: "No props match your filter",
+    filterAll: "All",
   },
 
   tiles: {
@@ -226,6 +233,13 @@ export const en = {
     failed: "Export failed",
     exporting: "Exporting…",
     export: "Export",
+  },
+
+  busy: {
+    generic: "Working…",
+    fill: "Filling…",
+    undo: "Undoing…",
+    redo: "Redoing…",
   },
 
   error: {

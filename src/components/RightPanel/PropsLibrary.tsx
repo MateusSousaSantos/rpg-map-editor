@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMapStore } from "../../stores/mapStore";
 import { useToolStore } from "../../stores/toolStore";
 import { useTranslation } from "../../hooks/useTranslation";
-import { FiTrash2, FiPlus } from "react-icons/fi";
+import { FiTrash2, FiPlus, FiSearch } from "react-icons/fi";
 import { FaChevronDown, FaChevronLeft } from "react-icons/fa";
 import { AddPropModal } from "../AddPropModal/AddPropModal";
 
@@ -94,6 +94,9 @@ interface PropCategoryProps {
   onDragEnd: () => void;
   onSelect: (propDefId: string) => void;
   onRemove: (defId: string) => void;
+  selectedGroup: string | null;
+  onSelectGroup: (group: string) => void;
+  onBack: () => void;
 }
 
 const PropCategory = ({
@@ -105,10 +108,12 @@ const PropCategory = ({
   onDragEnd,
   onSelect,
   onRemove,
+  selectedGroup,
+  onSelectGroup,
+  onBack,
 }: PropCategoryProps) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(true);
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
 
   // Build group map and collect ungrouped props
   const groupMap = new Map<string, { props: PropDefinition[]; color?: string }>();
@@ -136,7 +141,7 @@ const PropCategory = ({
         <div className="flex items-center gap-2">
           <button
             className="flex items-center gap-1 text-xs text-ink-muted hover:text-ink transition-colors"
-            onClick={() => setSelectedGroup(null)}
+            onClick={onBack}
           >
             <FaChevronLeft size={10} />
             <span className="uppercase tracking-wide font-semibold">{title}</span>
@@ -201,7 +206,7 @@ const PropCategory = ({
             key={groupLabel}
             label={groupLabel}
             color={color}
-            onClick={() => setSelectedGroup(groupLabel)}
+            onClick={() => onSelectGroup(groupLabel)}
           />
         ))}
 
@@ -237,14 +242,41 @@ export const PropsLibrary = () => {
 
   const [draggedPropId, setDraggedPropId] = useState<string | null>(null);
   const [isAddPropModalOpen, setIsAddPropModalOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  // Which single group (across all tag categories) is drilled into. When set,
+  // only that category renders, so the focus is unambiguous.
+  const [drill, setDrill] = useState<{ tag: string; group: string } | null>(null);
 
   if (!map) return null;
+
+  // Distinct filter values — prefer theme, fall back to category
+  const filterValues = Array.from(
+    new Set(
+      map.propDefinitions
+        .map((def) => def.theme ?? def.category)
+        .filter((v): v is string => !!v),
+    ),
+  ).sort();
+
+  // Apply search + active filter before grouping
+  const query = search.trim().toLowerCase();
+  const filteredProps = map.propDefinitions.filter((def) => {
+    if (activeFilter && (def.theme ?? def.category) !== activeFilter) return false;
+    if (!query) return true;
+    return (
+      def.name.toLowerCase().includes(query) ||
+      def.category?.toLowerCase().includes(query) ||
+      def.group?.toLowerCase().includes(query) ||
+      def.tags?.some((tag) => tag.toLowerCase().includes(query))
+    );
+  });
 
   // Group props by tags
   const propsByTag = new Map<string, PropDefinition[]>();
   const uncategorizedProps: PropDefinition[] = [];
 
-  map.propDefinitions.forEach((def) => {
+  filteredProps.forEach((def) => {
     if (!def.tags || def.tags.length === 0) {
       uncategorizedProps.push(def);
     } else {
@@ -256,6 +288,20 @@ export const PropsLibrary = () => {
   });
 
   const sortedTags = Array.from(propsByTag.keys()).sort();
+
+  // Unified category list (tag groups + the "Other" bucket), so a single drill
+  // state can hide every other category when one group is opened.
+  const categories: { title: string; props: PropDefinition[] }[] = [
+    ...sortedTags.map((tag) => ({ title: tag, props: propsByTag.get(tag)! })),
+    ...(uncategorizedProps.length > 0
+      ? [{ title: t("library.other"), props: uncategorizedProps }]
+      : []),
+  ];
+
+  // When drilled in, render only the active category; otherwise show all.
+  const visibleCategories = drill
+    ? categories.filter((c) => c.title === drill.tag)
+    : categories;
 
   const handleDragStart = (e: React.DragEvent, propDefId: string) => {
     setDraggedPropId(propDefId);
@@ -286,33 +332,74 @@ export const PropsLibrary = () => {
       {map.propDefinitions.length === 0 ? (
         <p className="text-xs text-ink-muted py-2">{t("library.noPropsAvailable")}</p>
       ) : (
-        <div className="space-y-4">
-          {sortedTags.map((tag) => (
-            <PropCategory
-              key={tag}
-              title={tag}
-              props={propsByTag.get(tag)!}
-              selectedPropId={selectedPropDefinitionId}
-              draggedPropId={draggedPropId}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onSelect={setSelectedPropDefinition}
-              onRemove={removePropDefinition}
+        <>
+          {/* Search */}
+          <div className="relative">
+            <FiSearch
+              size={13}
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-muted pointer-events-none"
             />
-          ))}
-          {uncategorizedProps.length > 0 && (
-            <PropCategory
-              title={t("library.other")}
-              props={uncategorizedProps}
-              selectedPropId={selectedPropDefinitionId}
-              draggedPropId={draggedPropId}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onSelect={setSelectedPropDefinition}
-              onRemove={removePropDefinition}
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t("library.searchPlaceholder")}
+              className="w-full pl-8 pr-2 py-1.5 bg-panel border border-edge rounded-lg text-ink text-xs placeholder:text-ink-muted focus:outline-none focus:border-accent-light"
             />
+          </div>
+
+          {/* Filter chips */}
+          {filterValues.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                onClick={() => setActiveFilter(null)}
+                className={`px-2 py-1 rounded-full text-[10px] font-medium border transition-colors ${
+                  activeFilter === null
+                    ? "bg-accent/15 border-accent/40 text-accent"
+                    : "bg-panel border-edge text-ink-muted hover:text-ink hover:border-edge-strong"
+                }`}
+              >
+                {t("library.filterAll")}
+              </button>
+              {filterValues.map((value) => (
+                <button
+                  key={value}
+                  onClick={() => setActiveFilter(value)}
+                  className={`px-2 py-1 rounded-full text-[10px] font-medium border capitalize transition-colors ${
+                    activeFilter === value
+                      ? "bg-accent/15 border-accent/40 text-accent"
+                      : "bg-panel border-edge text-ink-muted hover:text-ink hover:border-edge-strong"
+                  }`}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
           )}
-        </div>
+
+          {filteredProps.length === 0 ? (
+            <p className="text-xs text-ink-muted py-2">{t("library.noSearchResults")}</p>
+          ) : (
+            <div className="space-y-4">
+              {visibleCategories.map((cat) => (
+                <PropCategory
+                  key={cat.title}
+                  title={cat.title}
+                  props={cat.props}
+                  selectedPropId={selectedPropDefinitionId}
+                  draggedPropId={draggedPropId}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onSelect={setSelectedPropDefinition}
+                  onRemove={removePropDefinition}
+                  selectedGroup={drill?.tag === cat.title ? drill.group : null}
+                  onSelectGroup={(group) => setDrill({ tag: cat.title, group })}
+                  onBack={() => setDrill(null)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
       <p className="text-[10px] text-ink-muted mt-2">💡 {t("library.dragHint")}</p>
 

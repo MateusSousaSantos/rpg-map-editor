@@ -8,6 +8,7 @@ import { useHistoryStore } from '../stores/historyStore';
 import type { TileInstance, TileType, MapAction } from '../types/map';
 import { createProp, getNextZIndex, findPropsAtPosition } from '../utils/props';
 import { pickRandomVariant } from '../utils/tilesdefinition';
+import { runTileCommit } from '../utils/busyTask';
 
 interface CanvasEventsParams {
   tileSize: number;
@@ -264,18 +265,20 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       }
     }
 
-    // Batch operations for better performance
-    if (tileIdsToRemove.length > 0) {
-      useMapStore.getState().batchRemoveTiles(layer.id, tileIdsToRemove);
-    }
-    if (tilesToAdd.length > 0) {
-      useMapStore.getState().batchAddTiles(layer.id, tilesToAdd);
-    }
-
-    // Record as single history action
-    if (historyActions.length > 0) {
-      useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
-    }
+    // Apply the box paint and record it as a single history action. A large box
+    // commits its whole region at once, so route big ones through the busy
+    // overlay; small ones run inline to avoid a spinner flash.
+    runTileCommit('generic', tilesToAdd.length + tileIdsToRemove.length, () => {
+      if (tileIdsToRemove.length > 0) {
+        useMapStore.getState().batchRemoveTiles(layer.id, tileIdsToRemove);
+      }
+      if (tilesToAdd.length > 0) {
+        useMapStore.getState().batchAddTiles(layer.id, tilesToAdd);
+      }
+      if (historyActions.length > 0) {
+        useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
+      }
+    });
   }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTileAt]);
 
   /**
@@ -313,14 +316,16 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       }
     }
 
-    if (tileIdsToRemove.length > 0) {
-      useMapStore.getState().batchRemoveTiles(layer.id, tileIdsToRemove);
-    }
-
-    // Record as single history action
-    if (historyActions.length > 0) {
-      useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
-    }
+    // A large box erase clears its whole region at once, so route big ones
+    // through the busy overlay; small ones run inline to avoid a spinner flash.
+    runTileCommit('generic', tileIdsToRemove.length, () => {
+      if (tileIdsToRemove.length > 0) {
+        useMapStore.getState().batchRemoveTiles(layer.id, tileIdsToRemove);
+      }
+      if (historyActions.length > 0) {
+        useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
+      }
+    });
   }, [map, selectedLayerId, isInBounds, getTileAt]);
 
   /**
@@ -442,18 +447,20 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
     }
 
-    // Batch operations for better performance
-    if (tileIdsToRemove.length > 0) {
-      useMapStore.getState().batchRemoveTiles(layer.id, tileIdsToRemove);
-    }
-    if (tilesToAdd.length > 0) {
-      useMapStore.getState().batchAddTiles(layer.id, tilesToAdd);
-    }
-
-    // Record as single history action
-    if (historyActions.length > 0) {
-      useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
-    }
+    // Apply the fill and record it as a single history action. A large fill
+    // blocks the main thread long enough to look frozen, so route those through
+    // the busy overlay; small fills run inline to avoid a spinner flash.
+    runTileCommit('fill', tilesToAdd.length + tileIdsToRemove.length, () => {
+      if (tileIdsToRemove.length > 0) {
+        useMapStore.getState().batchRemoveTiles(layer.id, tileIdsToRemove);
+      }
+      if (tilesToAdd.length > 0) {
+        useMapStore.getState().batchAddTiles(layer.id, tilesToAdd);
+      }
+      if (historyActions.length > 0) {
+        useHistoryStore.getState().addAction({ type: 'BATCH', actions: historyActions });
+      }
+    });
   }, [map, selectedTileDefinitionId, selectedTileGridType, selectedLayerId, isInBounds, getTileAt]);
 
   /**

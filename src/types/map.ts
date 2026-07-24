@@ -108,6 +108,7 @@ export interface PropDefinition {
   tags: string[];             // "outdoor", "wooden", "interactive", etc.
   group?: string;             // visual sub-group label in the sidebar (e.g., 'Oak', 'Pine')
   groupColor?: string;        // hex color for the group swatch (e.g., '#4ade80')
+  theme?: string;             // e.g. 'outdoor', 'dungeon', 'tavern' — used by room populator (#1) and browser filter
 
   // Default appearance
   defaultOpacity?: number;

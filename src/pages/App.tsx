@@ -4,6 +4,8 @@ import { RightPanel } from "../components/RightPanel/RightPanel";
 import { ToolDock } from "../components/Toolbar/ToolDock";
 import { ExportModal } from "../components/ExportModal/ExportModal";
 import { Navbar } from "../components/Layout/Navbar";
+import { MapNameEditor } from "../components/MapNameEditor";
+import { LoadingOverlay } from "../components/LoadingOverlay";
 import { useMapStore } from "../stores/mapStore";
 import { useUISelectionStore } from "../stores/uiSelectionStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
@@ -41,7 +43,7 @@ function App() {
           {/* Map info sub-bar */}
           {map && (
             <div className="h-8 border-b border-edge bg-panel/60 flex items-center px-4 gap-2 shrink-0">
-              <span className="text-xs font-semibold text-ink">{map.name}</span>
+              <MapNameEditor />
               <span className="text-ink-muted text-xs">·</span>
               <span className="text-xs text-ink-muted">
                 {map.width}×{map.height} tiles · {map.tileSize}px
@@ -51,6 +53,9 @@ function App() {
 
           {/* Map Canvas */}
           <MapCanvas editable={true} />
+
+          {/* Busy overlay for long-running operations (big fill/undo) */}
+          <LoadingOverlay />
         </main>
 
         {/* Right Panel */}

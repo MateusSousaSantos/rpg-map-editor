@@ -1,0 +1,10 @@
+{
+  "category": "furniture",
+  "group": "Farm",
+  "groupColor": "#86efac",
+  "theme": "outdoor",
+  "tags": ["furniture"],
+  "props": [
+    { "id": "fence", "name": "Fence", "file": "fence.png", "width": 16, "height": 16 }
+  ]
+}

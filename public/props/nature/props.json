@@ -1,0 +1,10 @@
+{
+  "category": "nature",
+  "group": "Nature",
+  "groupColor": "#a3e635",
+  "theme": "outdoor",
+  "tags": ["nature"],
+  "props": [
+    { "id": "stone", "name": "Stone", "file": "stone.png", "width": 16, "height": 16 }
+  ]
+}

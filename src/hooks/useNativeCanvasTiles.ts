@@ -2,7 +2,7 @@ import { useEffect, useRef, useMemo, useState } from 'react';
 import type { MapLayer, TileInstance, BaseTileDefinition, OverlayTileDefinition } from '../types/map';
 import { useTextureCache } from '../stores/textureCache';
 import { useViewportStore } from '../stores/viewportStore';
-import { isAutotileEnabled, computeBlobBitmask, resolveAutotileTexturePath } from '../utils/autotiling';
+import { isAutotileEnabled, computeBlobBitmask, resolveAutotileTexturePath, VALID_BLOB_BITMASKS } from '../utils/autotiling';
 import { getTintedTile } from '../utils/tint';
 
 interface UseNativeCanvasTilesProps {
@@ -59,6 +59,8 @@ export const useNativeCanvasTiles = ({
   const [drawVersion, setDrawVersion] = useState(0);
   const prevTilesRef = useRef<Map<string, TileInstance>>(new Map());
   const loadingTexturesRef = useRef<Set<string>>(new Set());
+  // Autotile groups whose full variant set has already been preloaded
+  const preloadedGroupsRef = useRef<Set<string>>(new Set());
 
   // Calculate visible tile bounds with padding
   const visibleBounds = useMemo((): VisibleBounds => {
@@ -206,6 +208,15 @@ export const useNativeCanvasTiles = ({
       const resolvedUrl = resolvedTextureUrls.get(tile.id);
       if (resolvedUrl && resolvedUrl !== definition.textureUrl) {
         enqueue(resolvedUrl);
+      }
+
+      // Preload the group's entire variant set once, so bitmask changes on
+      // edit swap textures instantly instead of flashing the base texture.
+      if (isAutotileEnabled(definition) && !preloadedGroupsRef.current.has(definition.autotileGroup!)) {
+        preloadedGroupsRef.current.add(definition.autotileGroup!);
+        for (const mask of VALID_BLOB_BITMASKS) {
+          enqueue(resolveAutotileTexturePath(definition, mask));
+        }
       }
     }
 

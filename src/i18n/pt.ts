@@ -94,6 +94,10 @@ export const pt: LocaleDictionary = {
     exportMap: "Exportar Mapa",
   },
 
+  editor: {
+    renameMap: "Renomear mapa",
+  },
+
   canvas: {
     noMapLoaded: "Nenhum mapa carregado",
     createOrLoad: "Crie ou carregue um mapa para começar a editar",
@@ -114,6 +118,9 @@ export const pt: LocaleDictionary = {
     dragHint: "Arraste props para o canvas",
     removeFromLibrary: 'Remover "{name}" da biblioteca',
     removeAria: "Remover {name}",
+    searchPlaceholder: "Buscar props…",
+    noSearchResults: "Nenhum prop corresponde ao filtro",
+    filterAll: "Todos",
   },
 
   tiles: {
@@ -226,6 +233,13 @@ export const pt: LocaleDictionary = {
     failed: "Falha ao exportar",
     exporting: "Exportando…",
     export: "Exportar",
+  },
+
+  busy: {
+    generic: "Processando…",
+    fill: "Preenchendo…",
+    undo: "Desfazendo…",
+    redo: "Refazendo…",
   },
 
   error: {
