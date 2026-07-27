@@ -23,7 +23,7 @@ import type {
   PropDefinition,
 } from '../../types/map';
 import { paintMapLayers, resolveTileTextureUrl } from '../exportMap';
-import { deriveNormalFromAlpha, FLAT_NORMAL_RGB } from './normals';
+import { FLAT_NORMAL_RGB } from './normals';
 
 export interface LightingBuffers {
   albedo: HTMLCanvasElement;
@@ -156,7 +156,11 @@ export function buildLightingBuffers(
       stampTileCentered(octx, texture, tx, ty, tilePx, rotation);
     }
 
-    // Props: alpha-derived normal stamp + alpha silhouette occluder.
+    // Props: keep a FLAT normal (the buffer's base fill), exactly like walls.
+    // An alpha-derived bevel sculpts the sprite with `N·L`, which darkens and
+    // distorts the art; props should be lit evenly and just cast shadows. Only
+    // the occluder is stamped, from the sprite's alpha silhouette, so cast
+    // shadows still follow the actual art shape.
     const sortedProps = [...layer.props]
       .filter((p) => p.visible)
       .sort((a, b) => a.zIndex - b.zIndex);
@@ -170,11 +174,6 @@ export function buildLightingBuffers(
       const py = prop.y * scale;
       const w = def.width * prop.scaleX * scale;
       const h = def.height * prop.scaleY * scale;
-
-      // NOTE: a rotated prop rotates the normal-map *texels* but not the encoded
-      // vectors — acceptable for MVP (most props aren't rotated).
-      const propNormal = deriveNormalFromAlpha(texture, def.textureUrl);
-      if (propNormal) stampProp(nctx, propNormal, px, py, w, h, prop.rotation);
 
       // Occluder: only the silhouette (alpha) matters; RGB is ignored by the shader.
       stampProp(octx, texture, px, py, w, h, prop.rotation);
