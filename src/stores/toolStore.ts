@@ -4,8 +4,8 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { TileType } from '../types/map';
-export type ToolType = 'brush' | 'eraser' | 'fill' | 'place-prop' | 'select' | 'pan' | 'box';
+import type { TileType, LightType } from '../types/map';
+export type ToolType = 'brush' | 'eraser' | 'fill' | 'place-prop' | 'place-light' | 'select' | 'pan' | 'box';
 
 interface ToolState {
   activeTool: ToolType;
@@ -17,6 +17,9 @@ interface ToolState {
 
   // Place prop tool
   selectedPropDefinitionId: string | null;
+
+  // Place light tool — which shape the next placed light will be
+  selectedLightType: LightType;
 
   // Tool settings
   brushSize: number; // for future multi-tile brush
@@ -39,6 +42,7 @@ interface ToolState {
   setPickerActive: (active: boolean) => void;
   setSelectedTileDefinition: (defId: string, gridType: TileType) => void;
   setSelectedPropDefinition: (defId: string) => void;
+  setSelectedLightType: (type: LightType) => void;
   setBrushSize: (size: number) => void;
   setSelectedTileColor: (color: string | null) => void;
   addSwatch: (color: string) => void;
@@ -56,6 +60,7 @@ export const useToolStore = create<ToolState>()(
   selectedTileDefinitionId: null,
   selectedTileGridType: null,
   selectedPropDefinitionId: null,
+  selectedLightType: 'point',
   brushSize: 1,
   selectedTileColor: null,
   customSwatches: [],
@@ -87,6 +92,9 @@ export const useToolStore = create<ToolState>()(
       selectedTileDefinitionId: null,
       selectedTileGridType: null,
     })),
+
+  setSelectedLightType: (type) =>
+    set(() => ({ selectedLightType: type })),
 
   setBrushSize: (size) =>
     set(() => ({

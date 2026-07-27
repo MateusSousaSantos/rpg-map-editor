@@ -1,4 +1,4 @@
-import type { BaseTileDefinition, OverlayTileDefinition, PropDefinition, PropInstance, TileInstance } from '../types/map';
+import type { BaseTileDefinition, MapDocument, OverlayTileDefinition, PropDefinition, PropInstance, TileInstance } from '../types/map';
 import { useMapStore } from '../stores/mapStore';
 import { useTextureCache } from '../stores/textureCache';
 import { isAutotileEnabled, computeBlobBitmask, resolveAutotileTexturePath } from './autotiling';
@@ -89,51 +89,7 @@ export async function exportMap(
   }
 
   // ─── Render layers (bottom → top) ─────────────────────────────────────────
-  const sortedLayers = [...map.layers].sort((a, b) => a.depthIndex - b.depthIndex);
-
-  for (const layer of sortedLayers) {
-    if (!layer.visible) continue;
-
-    for (const tile of layer.tilesById.values()) {
-      const def = tileDefinitions.get(tile.definitionId);
-      if (!def) continue;
-
-      // Overflow tiles are stored as standalone entries in tilesById (type === 'overflow').
-      // They don't have autotiling — use their base textureUrl directly.
-      let resolvedUrl = def.textureUrl;
-      if (tile.type !== 'overflow' && isAutotileEnabled(def)) {
-        const bitmask = computeBlobBitmask(
-          tile.gridX,
-          tile.gridY,
-          layer.tiles,
-          def.autotileGroup!,
-          tile.type,
-          tileDefinitions as Map<string, BaseTileDefinition>,
-        );
-        resolvedUrl = resolveAutotileTexturePath(def, bitmask);
-      }
-
-      const texture = getTexture(resolvedUrl) ?? getTexture(def.textureUrl);
-      if (!texture || !texture.complete) continue;
-
-      drawTile(ctx, tile, def as OverlayTileDefinition, texture, tileSize, scale, layer.opacity);
-    }
-
-    // ─── Render props for this layer (sorted by zIndex) ───────────────────
-    const sortedProps = [...layer.props]
-      .filter(prop => prop.visible)
-      .sort((a, b) => a.zIndex - b.zIndex);
-
-    for (const prop of sortedProps) {
-      const def = propDefinitions.get(prop.definitionId);
-      if (!def) continue;
-
-      const texture = getTexture(def.textureUrl);
-      if (!texture || !texture.complete) continue;
-
-      drawProp(ctx, prop, def, texture, scale, layer.opacity);
-    }
-  }
+  paintMapLayers(ctx, map, scale, getTexture);
 
   // ─── Grid overlay ─────────────────────────────────────────────────────────
   if (showGrid) {
@@ -187,6 +143,93 @@ export async function exportMap(
       0.95,
     );
   });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared map painter (used by PNG export and the lighting albedo buffer)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Resolve the texture URL a tile actually renders with. Overflow tiles use their
+ * base `textureUrl`; autotiled tiles resolve to the blob-bitmask variant for their
+ * neighborhood. This is the single source of truth for "which sprite is on this
+ * tile", shared by the painter and the lighting buffer builder.
+ */
+export function resolveTileTextureUrl(
+  tile: TileInstance,
+  def: OverlayTileDefinition | BaseTileDefinition,
+  layerTiles: Map<string, TileInstance>,
+  tileDefinitions: Map<string, BaseTileDefinition | OverlayTileDefinition>,
+): string {
+  // Overflow tiles are stored as standalone entries in tilesById (type === 'overflow').
+  // They don't have autotiling — use their base textureUrl directly.
+  if (tile.type !== 'overflow' && isAutotileEnabled(def)) {
+    const bitmask = computeBlobBitmask(
+      tile.gridX,
+      tile.gridY,
+      layerTiles,
+      def.autotileGroup!,
+      tile.type,
+      tileDefinitions as Map<string, BaseTileDefinition>,
+    );
+    return resolveAutotileTexturePath(def, bitmask);
+  }
+  return def.textureUrl;
+}
+
+/**
+ * Paint every visible layer's tiles and props onto `ctx`, bottom → top, at the
+ * given pixel `scale`. Textures are pulled from the supplied lookup; any tile or
+ * prop whose texture isn't loaded yet is skipped (the caller is expected to
+ * repaint once more textures arrive). This is the single source of truth for
+ * "what the map looks like unlit", shared by `exportMap` and the lighting engine
+ * so both paths stay pixel-identical.
+ */
+export function paintMapLayers(
+  ctx: CanvasRenderingContext2D,
+  map: MapDocument,
+  scale: number,
+  getTexture: (url: string) => HTMLImageElement | undefined,
+): void {
+  const tileSize = map.tileSize;
+
+  const tileDefinitions = new Map<string, BaseTileDefinition | OverlayTileDefinition>();
+  for (const def of map.tileDefinitions) tileDefinitions.set(def.id, def);
+
+  const propDefinitions = new Map<string, PropDefinition>();
+  for (const def of map.propDefinitions) propDefinitions.set(def.id, def);
+
+  const sortedLayers = [...map.layers].sort((a, b) => a.depthIndex - b.depthIndex);
+
+  for (const layer of sortedLayers) {
+    if (!layer.visible) continue;
+
+    for (const tile of layer.tilesById.values()) {
+      const def = tileDefinitions.get(tile.definitionId);
+      if (!def) continue;
+
+      const resolvedUrl = resolveTileTextureUrl(tile, def, layer.tiles, tileDefinitions);
+      const texture = getTexture(resolvedUrl) ?? getTexture(def.textureUrl);
+      if (!texture || !texture.complete) continue;
+
+      drawTile(ctx, tile, def as OverlayTileDefinition, texture, tileSize, scale, layer.opacity);
+    }
+
+    // ─── Render props for this layer (sorted by zIndex) ───────────────────
+    const sortedProps = [...layer.props]
+      .filter(prop => prop.visible)
+      .sort((a, b) => a.zIndex - b.zIndex);
+
+    for (const prop of sortedProps) {
+      const def = propDefinitions.get(prop.definitionId);
+      if (!def) continue;
+
+      const texture = getTexture(def.textureUrl);
+      if (!texture || !texture.complete) continue;
+
+      drawProp(ctx, prop, def, texture, scale, layer.opacity);
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

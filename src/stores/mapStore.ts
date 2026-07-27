@@ -12,6 +12,8 @@ import type {
   MapLayer,
   TileInstance,
   PropInstance,
+  LightInstance,
+  LightingConfig,
   BaseTileDefinition,
   OverlayTileDefinition,
   PropDefinition,
@@ -161,6 +163,15 @@ interface MapState {
   updateProp: (layerId: string, propId: string, changes: Partial<PropInstance>) => void;
   getProp: (layerId: string, propId: string) => PropInstance | undefined;
 
+  // Light operations
+  addLight: (layerId: string, light: LightInstance) => void;
+  removeLight: (layerId: string, lightId: string) => void;
+  updateLight: (layerId: string, lightId: string, changes: Partial<LightInstance>) => void;
+  getLight: (layerId: string, lightId: string) => LightInstance | undefined;
+
+  // Map-wide lighting environment
+  updateLighting: (changes: Partial<LightingConfig>) => void;
+
   // Asset management
   addTileDefinition: (definition: BaseTileDefinition | OverlayTileDefinition) => void;
   removeTileDefinition: (definitionId: string) => void;
@@ -201,10 +212,16 @@ export const useMapStore = create<MapState>()(
                 tiles: new Map(),
                 tilesById: new Map(),
                 props: [],
+                lights: [],
               }
             ],
             tileDefinitions: [],
             propDefinitions: [],
+            lighting: {
+              enabled: false,
+              ambientColor: '#0a0a1e',
+              ambientIntensity: 1,
+            },
           };
 
           // Save to savedMaps
@@ -247,6 +264,7 @@ export const useMapStore = create<MapState>()(
               ...layer,
               tiles: new Map(layer.tiles),
               tilesById: new Map(layer.tilesById),
+              lights: layer.lights ?? [],
             })),
           };
           state.currentMapId = mapId;
@@ -636,6 +654,73 @@ export const useMapStore = create<MapState>()(
       return layer?.props.find((p) => p.id === propId);
     },
 
+    addLight: (layerId, light) =>
+      set((state) => {
+        if (state.map) {
+          const layer = state.map.layers.find((l) => l.id === layerId);
+          if (layer) {
+            // Older maps persisted before lights existed may lack the array
+            if (!layer.lights) layer.lights = [];
+            layer.lights.push(light);
+            state.map.lastModified = new Date();
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
+          }
+        }
+      }),
+
+    removeLight: (layerId, lightId) =>
+      set((state) => {
+        if (state.map) {
+          const layer = state.map.layers.find((l) => l.id === layerId);
+          if (layer?.lights) {
+            layer.lights = layer.lights.filter((l) => l.id !== lightId);
+            state.map.lastModified = new Date();
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
+          }
+        }
+      }),
+
+    updateLight: (layerId, lightId, changes) =>
+      set((state) => {
+        if (state.map) {
+          const layer = state.map.layers.find((l) => l.id === layerId);
+          const light = layer?.lights?.find((l) => l.id === lightId);
+          if (light) {
+            Object.assign(light, changes);
+            state.map.lastModified = new Date();
+            if (state.currentMapId) {
+              state.savedMaps.set(state.currentMapId, state.map);
+            }
+          }
+        }
+      }),
+
+    getLight: (layerId, lightId) => {
+      const state = get();
+      const layer = state.map?.layers.find((l) => l.id === layerId);
+      return layer?.lights?.find((l) => l.id === lightId);
+    },
+
+    updateLighting: (changes) =>
+      set((state) => {
+        if (state.map) {
+          const current: LightingConfig = state.map.lighting ?? {
+            enabled: false,
+            ambientColor: '#0a0a1e',
+            ambientIntensity: 1,
+          };
+          state.map.lighting = { ...current, ...changes };
+          state.map.lastModified = new Date();
+          if (state.currentMapId) {
+            state.savedMaps.set(state.currentMapId, state.map);
+          }
+        }
+      }),
+
     addTileDefinition: (definition) =>
       set((state) => {
         if (state.map) {
@@ -759,6 +844,7 @@ export const useMapStore = create<MapState>()(
               ...layer,
               tiles: new Map(layer.tiles || []),
               tilesById: new Map(layer.tilesById || []),
+              lights: layer.lights || [],
             }));
           }
         }
@@ -777,6 +863,7 @@ export const useMapStore = create<MapState>()(
                   ...layer,
                   tiles: new Map(layer.tiles || []),
                   tilesById: new Map(layer.tilesById || []),
+                  lights: layer.lights || [],
                 })),
               }
             ])

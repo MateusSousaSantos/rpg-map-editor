@@ -199,6 +199,7 @@ export const LayersSection = () => {
       tiles: new Map(),
       tilesById: new Map(),
       props: [],
+      lights: [],
     };
     addLayer(newLayer);
     selectLayer(newLayer.id);

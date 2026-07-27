@@ -97,13 +97,13 @@ export const PropInspector = () => {
               <div>
                 <label className="text-xs text-ink-muted block mb-1">{t("inspector.width")}</label>
                 <div className="w-full px-2 py-1 text-sm bg-canvas border border-edge rounded text-ink-secondary">
-                  {Math.round(selectedProp.width)}
+                  {Math.round(selectedProp.width * selectedProp.scaleX)}
                 </div>
               </div>
               <div>
                 <label className="text-xs text-ink-muted block mb-1">{t("inspector.height")}</label>
                 <div className="w-full px-2 py-1 text-sm bg-canvas border border-edge rounded text-ink-secondary">
-                  {Math.round(selectedProp.height)}
+                  {Math.round(selectedProp.height * selectedProp.scaleY)}
                 </div>
               </div>
             </div>

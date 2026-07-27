@@ -11,6 +11,7 @@
 import { Group, Image, Transformer } from 'react-konva';
 import { useEffect, useState, useRef, memo } from 'react';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
+import { useToolStore } from '../../stores/toolStore';
 import { useTextureCache } from '../../stores/textureCache';
 import type { MapLayer, PropInstance } from '../../types/map';
 import { useMapStore } from '../../stores/mapStore';
@@ -31,27 +32,31 @@ export const PropLayer = memo(({ layer }: PropLayerProps) => {
     return globalDepthA - globalDepthB;
   });
   const selectedPropIds = useUISelectionStore((state) => state.selectedPropIds);
+  const activeTool = useToolStore((state) => state.activeTool);
   const transformerRef = useRef<Konva.Transformer>(null);
   const groupRefs = useRef<Map<string, Konva.Group>>(new Map());
 
-  // Update transformer when selection changes
+  // Update transformer when selection changes. The Transformer must live in the
+  // same Konva layer as the nodes it manipulates (Konva doesn't track nodes
+  // across layers), so it stays here. Props are only editable with the Select
+  // tool, so the handles detach under any other tool.
   useEffect(() => {
     const transformer = transformerRef.current;
     if (!transformer) return;
 
     const selectedNodes: Konva.Group[] = [];
-    sortedProps.forEach(prop => {
-      if (selectedPropIds.has(prop.id)) {
-        const node = groupRefs.current.get(prop.id);
-        if (node) {
-          selectedNodes.push(node);
+    if (activeTool === 'select') {
+      sortedProps.forEach(prop => {
+        if (selectedPropIds.has(prop.id)) {
+          const node = groupRefs.current.get(prop.id);
+          if (node) selectedNodes.push(node);
         }
-      }
-    });
+      });
+    }
 
     transformer.nodes(selectedNodes);
     transformer.getLayer()?.batchDraw();
-  }, [selectedPropIds, sortedProps]);
+  }, [selectedPropIds, sortedProps, activeTool]);
 
   if (!layer.visible) return null;
 
@@ -68,7 +73,7 @@ export const PropLayer = memo(({ layer }: PropLayerProps) => {
         />
       ))}
 
-      {/* Transformer for resize and rotation */}
+      {/* Transformer for resize and rotation (same layer as the prop nodes) */}
       <Transformer
         ref={transformerRef}
         rotateEnabled={true}
@@ -100,20 +105,19 @@ interface PropGroupProps {
 
 const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: PropGroupProps) => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
-  const { selectLayer, selectProps, togglePropSelection } = useUISelectionStore();
-  const selectedPropIds = useUISelectionStore((state) => state.selectedPropIds);
+  const { selectLayer, selectProps } = useUISelectionStore();
+  const activeTool = useToolStore((state) => state.activeTool);
   const propDefinitions = useMapStore((state) => state.map?.propDefinitions || []);
   const updateProp = useMapStore((state) => state.updateProp);
   const layerProps = useMapStore((state) => state.map?.layers.find((layer) => layer.id === layerId)?.props || []);
   const addProp = useMapStore((state) => state.addProp);
   const { getTexture, loadTexture } = useTextureCache();
   const groupRef = useRef<Konva.Group>(null);
-  const suppressClickRef = useRef(false);
 
   // Get prop definition
   const definition = propDefinitions.find(def => def.id === prop.definitionId);
 
-  // Register/unregister group ref
+  // Register/unregister group ref so the layer's Transformer can attach to it.
   useEffect(() => {
     if (groupRef.current) {
       onMount(groupRef.current);
@@ -162,33 +166,12 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
 
     e.evt.preventDefault();
     e.cancelBubble = true;
-    suppressClickRef.current = true;
     duplicateSelectedProp();
   };
 
-  // Handle click on prop
-  const handleClick = (e: any) => {
-    e.cancelBubble = true; // Stop event from propagating to stage
-
-    if (suppressClickRef.current) {
-      suppressClickRef.current = false;
-      return;
-    }
-
-    const isMultiSelect = e.evt.ctrlKey || e.evt.metaKey;
-    const isSelected = selectedPropIds.has(prop.id);
-
-    if (isMultiSelect) {
-      togglePropSelection(prop.id);
-    } else {
-      // If already selected and clicking again, deselect
-      if (isSelected) {
-        selectProps([]);
-      } else {
-        selectProps([prop.id]);
-      }
-    }
-  };
+  // Selection is owned by the stage-level select tool (handleSelectionTool in
+  // useCanvasEvents), so props don't handle their own click selection — that
+  // previously double-fired against the stage handler and deselected the prop.
 
   // Handle transform end - update prop transform properties
   const handleTransformEnd = () => {
@@ -199,18 +182,13 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
     const scaleY = node.scaleY();
     const rotation = node.rotation();
 
-    node.scaleX(1);
-    node.scaleY(1);
-
-    // Use the original dimensions to calculate the new width and height
-    const newWidth = prop.width * scaleX;
-    const newHeight = prop.height * scaleY;
-
+    // Size lives entirely in scaleX/scaleY (rendered size = definition dims ×
+    // scale — see the render below and exportMap). prop.width/height stay at the
+    // definition base so the hit box (props.ts isPointInProp) matches the render;
+    // writing width = base × scale here would double-count the scale.
     const newChanges = {
       x: node.x(),
       y: node.y(),
-      width: newWidth,
-      height: newHeight,
       rotation: rotation,
       scaleX: scaleX,
       scaleY: scaleY,
@@ -219,8 +197,6 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
     const previousChanges = {
       x: prop.x,
       y: prop.y,
-      width: prop.width,
-      height: prop.height,
       rotation: prop.rotation,
       scaleX: prop.scaleX,
       scaleY: prop.scaleY,
@@ -276,10 +252,8 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
       scaleX={prop.scaleX}
       scaleY={prop.scaleY}
       opacity={prop.opacity * layerOpacity}
-      draggable={!prop.locked}
+      draggable={activeTool === 'select' && !prop.locked}
       onMouseDown={handleMouseDown}
-      onClick={handleClick}
-      onTap={handleClick}
       onDragEnd={handleDragEnd}
       onTransformEnd={handleTransformEnd}
     >
