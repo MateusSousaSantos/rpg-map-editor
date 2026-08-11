@@ -7,6 +7,7 @@ import { useViewportStore } from '../stores/viewportStore';
 import { useHistoryStore } from '../stores/historyStore';
 import type { TileInstance, TileType, MapAction } from '../types/map';
 import { createProp, getNextZIndex, findPropsAtPosition } from '../utils/props';
+import { createLight, getNextLightZIndex } from '../utils/lights';
 import { pickRandomVariant } from '../utils/tilesdefinition';
 import { runTileCommit } from '../utils/busyTask';
 
@@ -29,6 +30,23 @@ interface CanvasEventsParams {
 const FILL_MATCH_BY_GROUP = true;
 
 /**
+ * Whether a mousedown/touch target belongs to a prop's resize/rotate Transformer
+ * (an anchor or the rotater). Those handles can sit outside the prop's body — the
+ * rotater floats above it — so treating a press on them as a normal canvas click
+ * would run the select tool, find no prop there, and clear the selection,
+ * detaching the transformer before the drag begins. Detecting them lets Konva
+ * drive the transform instead.
+ */
+const isTransformerTarget = (node: Konva.Node | null | undefined): boolean => {
+  let current: Konva.Node | null | undefined = node;
+  while (current) {
+    if (current.getClassName?.() === 'Transformer') return true;
+    current = current.getParent();
+  }
+  return false;
+};
+
+/**
  * useCanvasEvents - Manages all canvas interaction events
  *
  * Handles:
@@ -41,10 +59,10 @@ const FILL_MATCH_BY_GROUP = true;
  * @param editable - Whether the canvas is in edit mode
  */
 export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
-  const { activeTool, boxMode, selectedTileDefinitionId, selectedTileGridType, selectedPropDefinitionId } = useToolStore();
-  const { addTile, removeTile, getTileAt, map, addProp } = useMapStore();
+  const { activeTool, boxMode, selectedTileDefinitionId, selectedTileGridType, selectedPropDefinitionId, selectedLightType } = useToolStore();
+  const { addTile, removeTile, getTileAt, map, addProp, addLight } = useMapStore();
   const { zoom, panX, panY } = useViewportStore();
-  const { selectTiles, toggleTileSelection, clearSelection, selectedLayerId, selectProps, togglePropSelection } = useUISelectionStore();
+  const { selectTiles, toggleTileSelection, clearSelection, selectedLayerId, selectProps, togglePropSelection, selectLights, selectLayer } = useUISelectionStore();
 
   // Track if we're currently drawing (for drag operations)
   const isDrawingRef = useRef(false);
@@ -475,12 +493,17 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       : map.layers[0];
     if (!layer) return;
 
-    // First, check for props at this position (they should have priority)
+    // Lights are selected/deselected via their on-canvas handles (LightLayer),
+    // which cancel event bubbling — so they never reach this stage handler.
+
+    // Check for props at this position (they should have priority over tiles)
     const propsAtPosition = findPropsAtPosition(layer.props, worldX, worldY);
 
     if (propsAtPosition.length > 0) {
-      // Select the topmost prop
+      // Select the topmost prop. Sync the active layer so the PropInspector can
+      // resolve the selected prop (it looks up by selectedLayerId).
       const topProp = propsAtPosition[0];
+      selectLayer(layer.id);
       if (isMultiSelect) {
         togglePropSelection(topProp.id);
       } else {
@@ -515,7 +538,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
         clearSelection();
       }
     }
-  }, [map, selectedLayerId, isInBounds, getTileAt, toggleTileSelection, selectTiles, clearSelection, togglePropSelection, selectProps]);
+  }, [map, selectedLayerId, isInBounds, getTileAt, toggleTileSelection, selectTiles, clearSelection, togglePropSelection, selectProps, selectLayer]);
 
   /**
    * Handle place-prop tool - place a prop at clicked position
@@ -548,6 +571,27 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     // Select the newly placed prop
     selectProps([newProp.id]);
   }, [map, selectedPropDefinitionId, selectedLayerId, addProp, selectProps]);
+
+  /**
+   * Handle place-light tool - place a light at the clicked position.
+   * (x, y) is the light's center. Mirrors handlePlacePropTool.
+   */
+  const handlePlaceLightTool = useCallback((worldX: number, worldY: number) => {
+    if (!map) return;
+
+    const layer = selectedLayerId
+      ? map.layers.find(l => l.id === selectedLayerId)
+      : map.layers[0];
+    if (!layer || layer.locked) return;
+
+    const nextZIndex = getNextLightZIndex(layer.lights ?? []);
+    const newLight = createLight(selectedLightType, worldX, worldY, nextZIndex, map.tileSize);
+
+    addLight(layer.id, newLight);
+    useHistoryStore.getState().addAction({ type: 'ADD_LIGHT', layerId: layer.id, light: { ...newLight } });
+
+    selectLights([newLight.id]);
+  }, [map, selectedLightType, selectedLayerId, addLight, selectLights]);
 
   /**
    * Handle tile picker - pick the tile under cursor (Alt+click)
@@ -588,6 +632,9 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     const stage = e.target.getStage();
     if (!stage) return;
 
+    // Let Konva handle presses on a prop's transformer handles (see helper).
+    if (isTransformerTarget(e.target)) return;
+
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
@@ -623,8 +670,11 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       case 'place-prop':
         handlePlacePropTool(worldX, worldY);
         break;
+      case 'place-light':
+        handlePlaceLightTool(worldX, worldY);
+        break;
     }
-  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handleFillTool, handlePlacePropTool, handlePickerTool]);
+  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handleFillTool, handlePlacePropTool, handlePlaceLightTool, handlePickerTool]);
 
   /**
    * Handle mouse move event (for drag drawing)
@@ -717,6 +767,9 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     const stage = e.target.getStage();
     if (!stage) return;
 
+    // Let Konva handle presses on a prop's transformer handles (see helper).
+    if (isTransformerTarget(e.target)) return;
+
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
 
@@ -745,8 +798,11 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
       case 'place-prop':
         handlePlacePropTool(worldX, worldY);
         break;
+      case 'place-light':
+        handlePlaceLightTool(worldX, worldY);
+        break;
     }
-  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handleFillTool, handlePlacePropTool]);
+  }, [editable, activeTool, screenToGrid, screenToWorld, handleBrushTool, handleEraserTool, handleSelectionTool, handleFillTool, handlePlacePropTool, handlePlaceLightTool]);
 
   /**
    * Handle touch move — single finger only; mirrors handleMouseMove

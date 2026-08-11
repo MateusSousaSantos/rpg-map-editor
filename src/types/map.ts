@@ -103,6 +103,7 @@ export interface PropDefinition {
   name: string;
   category: string;           // "trees", "furniture", "objects", "npc", etc.
   textureUrl: string;         // path to sprite/image
+  normalMapUrl?: string;      // optional authored normal map; if absent, lighting derives one from alpha
   width: number;              // world width in pixels
   height: number;             // world height in pixels
   tags: string[];             // "outdoor", "wooden", "interactive", etc.
@@ -151,6 +152,73 @@ export interface PropInstance {
 }
 
 // ============================================================================
+// LIGHT SYSTEM
+// ============================================================================
+
+/**
+ * Placeable light shapes. Global ambient / directional "sun" is not an instance —
+ * it lives on the map document (see MapDocument.lighting) since it has no position.
+ */
+export type LightType = 'point' | 'spot' | 'area';
+
+/**
+ * Instance of a light placed on the map.
+ * Free-positioned like props (world coordinates), never grid-snapped.
+ */
+export interface LightInstance {
+  id: string;
+  type: LightType;
+
+  // Free positioning (world coords). Convention: (x, y) is the light's CENTER.
+  x: number;
+  y: number;
+
+  // Appearance
+  color: string;              // hex, e.g. '#ffaa55'
+  intensity: number;          // brightness multiplier (0..N, ~1 = normal)
+  radius: number;             // reach in world px (point/spot); falloff distance for area
+  z?: number;                 // elevation above the map plane, feeds N·L (default ~tileSize)
+
+  // Spot-only
+  angle?: number;             // facing direction in degrees (0 = +x, clockwise)
+  coneAngle?: number;         // full cone spread in degrees
+
+  // Area-only
+  width?: number;             // legacy rectangular emitter size (world px); seeds `corners`
+  height?: number;
+  // Free quadrilateral emitter: four corner offsets from the light's center
+  // (world px), in order (e.g. TL, TR, BR, BL). Each corner drags independently.
+  // When absent, a centered rectangle is derived from width/height.
+  corners?: { x: number; y: number }[];
+
+  // Behavior
+  castsShadows?: boolean;     // default true
+  flicker?: number;           // 0 = steady; >0 = flicker amplitude
+
+  // Organization
+  zIndex: number;
+  visible: boolean;
+  locked?: boolean;
+  name?: string;
+  properties?: Record<string, any>;
+}
+
+/**
+ * Map-wide lighting environment (ambient darkness + optional directional sun).
+ */
+export interface LightingConfig {
+  enabled: boolean;
+  ambientColor: string;       // base tint of unlit areas (hex)
+  ambientIntensity: number;   // 0 = pitch black, 1 = fully lit (no darkness)
+  sun?: {
+    angle: number;            // direction in degrees
+    color: string;            // hex
+    intensity: number;        // 0..N
+    mode?: 'sun' | 'moon';    // which preset drives the day/night toggle
+  };
+}
+
+// ============================================================================
 // LAYER SYSTEM
 // ============================================================================
 
@@ -173,6 +241,7 @@ export interface MapLayer {
   tiles: Map<string, TileInstance>;      // key: "x,y,type" for coordinate lookups
   tilesById: Map<string, TileInstance>;  // key: tile.id for ID-based lookups
   props: PropInstance[];
+  lights: LightInstance[];               // free-positioned lights (see LIGHT SYSTEM)
 
   // Metadata
   metadata?: Record<string, any>;
@@ -204,6 +273,9 @@ export interface MapDocument {
   // Asset libraries
   tileDefinitions: (BaseTileDefinition | OverlayTileDefinition)[];
   propDefinitions: PropDefinition[];
+
+  // Map-wide lighting environment (ambient + optional sun). Lights themselves live per-layer.
+  lighting?: LightingConfig;
 
   // Viewport/canvas state (optional, for resuming editing session)
   viewport?: {
@@ -243,6 +315,7 @@ export interface SerializedMapDocument {
   layers: SerializedMapLayer[];
   tileDefinitions: (BaseTileDefinition | OverlayTileDefinition)[];
   propDefinitions: PropDefinition[];
+  lighting?: LightingConfig;
 
   viewport?: {
     panX: number;
@@ -273,6 +346,7 @@ export interface SerializedMapLayer {
     value: TileInstance;
   }[];
   props: PropInstance[];
+  lights: LightInstance[];
 
   metadata?: Record<string, any>;
 }
@@ -319,6 +393,9 @@ export type MapAction =
   | { type: 'ADD_PROP'; layerId: string; prop: PropInstance }
   | { type: 'REMOVE_PROP'; layerId: string; propId: string; removedProp: PropInstance }
   | { type: 'UPDATE_PROP'; layerId: string; propId: string; changes: Partial<PropInstance>; previousChanges: Partial<PropInstance> }
+  | { type: 'ADD_LIGHT'; layerId: string; light: LightInstance }
+  | { type: 'REMOVE_LIGHT'; layerId: string; lightId: string; removedLight: LightInstance }
+  | { type: 'UPDATE_LIGHT'; layerId: string; lightId: string; changes: Partial<LightInstance>; previousChanges: Partial<LightInstance> }
   | { type: 'ADD_LAYER'; layer: MapLayer }
   | { type: 'REMOVE_LAYER'; layerId: string; removedLayer: MapLayer }
   | { type: 'UPDATE_LAYER'; layerId: string; changes: Partial<MapLayer>; previousChanges: Partial<MapLayer> }

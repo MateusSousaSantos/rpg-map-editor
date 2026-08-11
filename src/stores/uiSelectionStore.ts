@@ -1,26 +1,32 @@
 import { create } from 'zustand';
 
-type SelectionMode = 'tiles' | 'props' | null;
+type SelectionMode = 'tiles' | 'props' | 'lights' | null;
 
 interface UISelectionState {
   selectionMode: SelectionMode;
   selectedTileIds: Set<string>;
   selectedPropIds: Set<string>;
+  selectedLightIds: Set<string>;
   selectedLayerId: string | null;
   showGrid: boolean;
   sidebarOpen: boolean;
-  
+
   // Actions
   selectTiles: (tileIds: string[]) => void;
   deselectTile: (tileId: string) => void;
   clearTileSelection: () => void;
   toggleTileSelection: (tileId: string) => void;
-  
+
   selectProps: (propIds: string[]) => void;
   deselectProp: (propId: string) => void;
   clearPropSelection: () => void;
   togglePropSelection: (propId: string) => void;
-  
+
+  selectLights: (lightIds: string[]) => void;
+  deselectLight: (lightId: string) => void;
+  clearLightSelection: () => void;
+  toggleLightSelection: (lightId: string) => void;
+
   selectLayer: (layerId: string | null) => void;
   clearSelection: () => void;
   toggleGrid: () => void;
@@ -33,15 +39,17 @@ export const useUISelectionStore = create<UISelectionState>((set) => ({
   selectionMode: null,
   selectedTileIds: new Set(),
   selectedPropIds: new Set(),
+  selectedLightIds: new Set(),
   selectedLayerId: null,
   showGrid: true,
   sidebarOpen: true,
-  
+
   selectTiles: (tileIds) =>
     set(() => ({
       selectionMode: 'tiles',
       selectedTileIds: new Set(tileIds),
       selectedPropIds: new Set(),
+      selectedLightIds: new Set(),
     })),
   
   deselectTile: (tileId) =>
@@ -95,9 +103,10 @@ export const useUISelectionStore = create<UISelectionState>((set) => ({
         selectionMode: 'props',
         selectedPropIds: new Set(propIds),
         selectedTileIds: new Set(),
+        selectedLightIds: new Set(),
       };
     }),
-  
+
   deselectProp: (propId) =>
     set((state) => {
       const newPropIds = new Set(state.selectedPropIds);
@@ -135,15 +144,71 @@ export const useUISelectionStore = create<UISelectionState>((set) => ({
       };
     }),
   
+  selectLights: (lightIds) =>
+    set((state) => {
+      // Empty selection means "deselect lights" — don't force the panel into lights mode.
+      if (lightIds.length === 0) {
+        return {
+          selectedLightIds: new Set(),
+          selectionMode: state.selectionMode === 'lights' ? null : state.selectionMode,
+        };
+      }
+      return {
+        selectionMode: 'lights',
+        selectedLightIds: new Set(lightIds),
+        selectedTileIds: new Set(),
+        selectedPropIds: new Set(),
+      };
+    }),
+
+  deselectLight: (lightId) =>
+    set((state) => {
+      const newLightIds = new Set(state.selectedLightIds);
+      newLightIds.delete(lightId);
+      return {
+        selectedLightIds: newLightIds,
+        selectionMode: newLightIds.size === 0 ? null : state.selectionMode,
+      };
+    }),
+
+  clearLightSelection: () =>
+    set((state) => ({
+      selectedLightIds: new Set(),
+      selectionMode: state.selectionMode === 'lights' ? null : state.selectionMode,
+    })),
+
+  toggleLightSelection: (lightId) =>
+    set((state) => {
+      const newLightIds = new Set(state.selectedLightIds);
+      let newSelectionMode: SelectionMode = 'lights';
+
+      if (newLightIds.has(lightId)) {
+        newLightIds.delete(lightId);
+        if (newLightIds.size === 0) {
+          newSelectionMode = null;
+        }
+      } else {
+        newLightIds.add(lightId);
+      }
+
+      return {
+        selectionMode: newSelectionMode,
+        selectedLightIds: newLightIds,
+        selectedTileIds: state.selectionMode === 'tiles' ? new Set() : state.selectedTileIds,
+        selectedPropIds: state.selectionMode === 'props' ? new Set() : state.selectedPropIds,
+      };
+    }),
+
   selectLayer: (layerId) =>
     set(() => ({
       selectedLayerId: layerId,
     })),
-  
+
   clearSelection: () =>
     set(() => ({
       selectedTileIds: new Set(),
       selectedPropIds: new Set(),
+      selectedLightIds: new Set(),
       selectionMode: null,
       selectedLayerId: null,
     })),

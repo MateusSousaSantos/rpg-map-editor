@@ -81,6 +81,15 @@ function applyAction(action: MapAction): void {
     case 'UPDATE_PROP':
       ms.updateProp(action.layerId, action.propId, action.changes);
       break;
+    case 'ADD_LIGHT':
+      ms.addLight(action.layerId, action.light);
+      break;
+    case 'REMOVE_LIGHT':
+      ms.removeLight(action.layerId, action.removedLight.id);
+      break;
+    case 'UPDATE_LIGHT':
+      ms.updateLight(action.layerId, action.lightId, action.changes);
+      break;
     case 'ADD_LAYER':
       ms.addLayer(action.layer);
       break;
@@ -142,6 +151,15 @@ function reverseAction(action: MapAction): void {
       break;
     case 'UPDATE_PROP':
       ms.updateProp(action.layerId, action.propId, action.previousChanges);
+      break;
+    case 'ADD_LIGHT':
+      ms.removeLight(action.layerId, action.light.id);
+      break;
+    case 'REMOVE_LIGHT':
+      ms.addLight(action.layerId, action.removedLight);
+      break;
+    case 'UPDATE_LIGHT':
+      ms.updateLight(action.layerId, action.lightId, action.previousChanges);
       break;
     case 'ADD_LAYER':
       ms.removeLayer(action.layer.id);

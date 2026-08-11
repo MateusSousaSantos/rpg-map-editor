@@ -4,9 +4,12 @@ import { useUISelectionStore } from "../../stores/uiSelectionStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { TilesTab } from "./TilesTab";
 import { PropsLibrary } from "./PropsLibrary";
+import { LightsLibrary } from "./LightsLibrary";
 import { PropInspector } from "./PropInspector";
+import { LightInspector } from "./LightInspector";
+import { EnvironmentSection } from "./EnvironmentSection";
 
-type LibraryTab = "tiles" | "props";
+type LibraryTab = "tiles" | "props" | "lights";
 
 /**
  * ContextBody - the context-driven lower half of the right panel.
@@ -39,11 +42,16 @@ export const ContextBody = () => {
     return <PropInspector />;
   }
 
+  // A light is selected on the canvas → its inspector takes over.
+  if (selectionMode === "lights") {
+    return <LightInspector />;
+  }
+
   return (
     <div className="flex flex-col">
       {/* Segmented library toggle */}
       <div className="flex items-center gap-1 p-1.5 border-b border-edge">
-        {(["tiles", "props"] as LibraryTab[]).map((tab) => (
+        {(["tiles", "props", "lights"] as LibraryTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setLibraryTab(tab)}
@@ -53,15 +61,28 @@ export const ContextBody = () => {
                 : "text-ink-muted hover:text-ink hover:bg-raised"
             }`}
           >
-            {tab === "tiles" ? t("library.tabTiles") : t("library.tabProps")}
+            {tab === "tiles"
+              ? t("library.tabTiles")
+              : tab === "props"
+              ? t("library.tabProps")
+              : t("library.tabLights")}
           </button>
         ))}
       </div>
 
       {/* Library content */}
       <div className="p-2.5">
-        {libraryTab === "tiles" ? <TilesTab /> : <PropsLibrary />}
+        {libraryTab === "tiles" ? (
+          <TilesTab />
+        ) : libraryTab === "props" ? (
+          <PropsLibrary />
+        ) : (
+          <LightsLibrary />
+        )}
       </div>
+
+      {/* Lighting & atmosphere – map-wide ambient/sun, scoped to the Lights tab */}
+      {libraryTab === "lights" && <EnvironmentSection />}
     </div>
   );
 };

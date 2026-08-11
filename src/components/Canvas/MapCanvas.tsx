@@ -8,11 +8,15 @@ import { useUISelectionStore } from "../../stores/uiSelectionStore";
 import { GridLayer } from "./BackgroundLayer";
 import { TileLayer } from "./TileLayer";
 import { PropLayer } from "./PropLayer";
+import { LightLayer } from "./LightLayer";
 import { CursorLayer } from "./CursorLayer";
 import { FiZoomIn, FiZoomOut, FiMaximize2 } from "react-icons/fi";
 import { useCanvasEvents } from "../../hooks/useCanvasEvents";
 import { useTranslation } from "../../hooks/useTranslation";
 import { createProp, getNextZIndex } from "../../utils/props";
+import { createLight, getNextLightZIndex } from "../../utils/lights";
+import { useHistoryStore } from "../../stores/historyStore";
+import type { LightType } from "../../types/map";
 
 interface MapCanvasProps {
   mapId?: string;
@@ -49,11 +53,11 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
 
   // Store state
   const map = useMapStore((state) => state.map);
-  const { addProp } = useMapStore();
+  const { addProp, addLight } = useMapStore();
   const { panX, panY, zoom, setPan, setZoom, resetViewport, setDefaultPan } =
     useViewportStore();
   const showGrid = useUISelectionStore((state) => state.showGrid);
-  const { selectedLayerId, selectProps } = useUISelectionStore();
+  const { selectedLayerId, selectProps, selectLights } = useUISelectionStore();
 
   // Canvas events hook for tool interactions
   const canvasEvents = useCanvasEvents({
@@ -329,12 +333,14 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
     resetViewport();
   };
 
-  // Handle prop drop from library
+  // Handle prop / light drop from the library
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    if (!map) return;
 
     const propDefinitionId = e.dataTransfer.getData("propDefinitionId");
-    if (!propDefinitionId || !map) return;
+    const lightType = e.dataTransfer.getData("lightType") as LightType | "";
+    if (!propDefinitionId && !lightType) return;
 
     // Get drop position relative to container
     const rect = containerRef.current?.getBoundingClientRect();
@@ -352,6 +358,20 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
       ? map.layers.find((l) => l.id === selectedLayerId)
       : map.layers[0];
     if (!layer || layer.locked) return;
+
+    // Light drop — (x, y) is the light's center.
+    if (lightType) {
+      const nextZIndex = getNextLightZIndex(layer.lights ?? []);
+      const newLight = createLight(lightType, worldX, worldY, nextZIndex, map.tileSize);
+      addLight(layer.id, newLight);
+      useHistoryStore.getState().addAction({
+        type: "ADD_LIGHT",
+        layerId: layer.id,
+        light: { ...newLight },
+      });
+      selectLights([newLight.id]);
+      return;
+    }
 
     // Get prop definition
     const propDefinition = map.propDefinitions.find(
@@ -440,6 +460,9 @@ export const MapCanvas = ({ editable = true }: MapCanvasProps) => {
               <PropLayer layer={layer} />
             </Layer>
           ))}
+
+        {/* Lighting Layer - darkness overlay, light reveal/glow, and editable light handles */}
+        <LightLayer editable={editable} />
 
         {/* Cursor Preview Layer - Shows what will be placed */}
         {editable && (
