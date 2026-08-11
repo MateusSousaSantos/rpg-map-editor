@@ -3,28 +3,28 @@ import { useMapStore } from '../stores/mapStore';
 import { useTextureCache } from '../stores/textureCache';
 import { isAutotileEnabled, computeBlobBitmask, resolveAutotileTexturePath } from './autotiling';
 import { getTintedTile } from './tint';
+import { buildLightingBuffers } from './lighting/buffers';
+import { renderLighting } from './lighting/engine';
+import { buildRenderParams } from './lighting/scene';
 
 /**
- * Renders the full map (all visible layers) to an off-screen canvas and
- * triggers a browser download.
- *
- * @param format  - 'png' or 'jpeg'
- * @param scale   - Pixel multiplier applied to the tile grid (e.g. 2 → 2× size)
- * @param showGrid - Whether to draw grid lines over the exported image
+ * Composite the full map (all visible layers, optional lighting bake + grid) to
+ * a fresh off-screen canvas at the given pixel `scale`, loading any textures it
+ * needs first. This is the shared render used by both the file export and the
+ * export-modal preview, so what you see previewed is exactly what gets saved.
  */
-export async function exportMap(
+export async function composeMapCanvas(
+  map: MapDocument,
   format: 'png' | 'jpeg',
   scale: number,
   showGrid: boolean,
-): Promise<void> {
-  const map = useMapStore.getState().map;
-  if (!map) throw new Error('No map loaded');
-
+  bakeLighting = false,
+): Promise<HTMLCanvasElement> {
   const { loadTexture, getTexture } = useTextureCache.getState();
   const tileSize = map.tileSize;
 
-  const canvasWidth = map.width * tileSize * scale;
-  const canvasHeight = map.height * tileSize * scale;
+  const canvasWidth = Math.max(1, Math.round(map.width * tileSize * scale));
+  const canvasHeight = Math.max(1, Math.round(map.height * tileSize * scale));
 
   // ─── Build tileDefinitions lookup ────────────────────────────────────────
   const tileDefinitions = new Map<string, BaseTileDefinition | OverlayTileDefinition>();
@@ -91,6 +91,20 @@ export async function exportMap(
   // ─── Render layers (bottom → top) ─────────────────────────────────────────
   paintMapLayers(ctx, map, scale, getTexture);
 
+  // ─── Dynamic lighting bake ────────────────────────────────────────────────
+  // Build the same albedo/normal/occluder buffers the live overlay uses and run
+  // the shared WebGL engine, then draw the lit result over the unlit paint. Uses
+  // buildRenderParams so export relights identically to the on-canvas preview.
+  if (bakeLighting && map.lighting?.enabled) {
+    const buffers = buildLightingBuffers(map, scale, getTexture);
+    if (buffers) {
+      const lit = renderLighting(buildRenderParams(map, buffers, scale));
+      // renderLighting returns null when WebGL2 is unavailable — fall back to the
+      // unlit paint already on the canvas in that case.
+      if (lit) ctx.drawImage(lit, 0, 0);
+    }
+  }
+
   // ─── Grid overlay ─────────────────────────────────────────────────────────
   if (showGrid) {
     ctx.save();
@@ -117,6 +131,29 @@ export async function exportMap(
 
     ctx.restore();
   }
+
+  return canvas;
+}
+
+/**
+ * Renders the full map (all visible layers) to an off-screen canvas and
+ * triggers a browser download.
+ *
+ * @param format  - 'png' or 'jpeg'
+ * @param scale   - Pixel multiplier applied to the tile grid (e.g. 2 → 2× size)
+ * @param showGrid - Whether to draw grid lines over the exported image
+ * @param bakeLighting - Whether to bake the dynamic lighting into the image
+ */
+export async function exportMap(
+  format: 'png' | 'jpeg',
+  scale: number,
+  showGrid: boolean,
+  bakeLighting = false,
+): Promise<void> {
+  const map = useMapStore.getState().map;
+  if (!map) throw new Error('No map loaded');
+
+  const canvas = await composeMapCanvas(map, format, scale, showGrid, bakeLighting);
 
   // ─── Download ─────────────────────────────────────────────────────────────
   const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';

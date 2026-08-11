@@ -9,7 +9,8 @@ import { useTextureCache } from "../../stores/textureCache";
 import { useViewportStore } from "../../stores/viewportStore";
 import type { LightInstance, MapLayer, MapDocument } from "../../types/map";
 import { buildLightingBuffers, type LightingBuffers } from "../../utils/lighting/buffers";
-import { renderLighting, hexToRgb01, type EngineLight } from "../../utils/lighting/engine";
+import { renderLighting } from "../../utils/lighting/engine";
+import { buildRenderParams, type LightOverride } from "../../utils/lighting/scene";
 import { getAreaCorners } from "../../utils/lights";
 
 /**
@@ -38,25 +39,6 @@ const BAKE_DEBOUNCE = 80;
 const LIGHT_HANDLE_NAME = "light-handle";
 
 /**
- * A dragged light's live values, applied on top of the stored light so the
- * overlay can relight without committing to the store on every frame. Only the
- * fields the engine actually consumes matter (position + radius + elevation);
- * angle/cone/size don't affect the current point-light shader.
- */
-export interface LightOverride {
-  id: string;
-  x?: number;
-  y?: number;
-  radius?: number;
-  z?: number;
-  angle?: number;
-  coneAngle?: number;
-  width?: number;
-  height?: number;
-  corners?: { x: number; y: number }[];
-}
-
-/**
  * A cheap identity list of everything that affects the albedo/normal buffers —
  * map dimensions, the texture cache, and each layer's tile/prop collections and
  * compositing params. Immer replaces these references on mutation, so a shallow
@@ -74,47 +56,6 @@ function contentKey(m: MapDocument, textures: unknown): unknown[] {
 function sameKey(a: unknown[] | null, b: unknown[] | null): boolean {
   if (!a || !b || a.length !== b.length) return false;
   return a.every((v, i) => v === b[i]);
-}
-
-/** Build the engine light list, optionally overriding one light's live fields. */
-function gatherEngineLights(m: MapDocument, override?: LightOverride | null): EngineLight[] {
-  const lights: EngineLight[] = [];
-  for (const layer of m.layers) {
-    if (!layer.visible) continue;
-    for (const light of layer.lights ?? []) {
-      if (!light.visible) continue;
-      const o = override && override.id === light.id ? override : null;
-      lights.push({
-        x: o?.x ?? light.x,
-        y: o?.y ?? light.y,
-        radius: o?.radius ?? light.radius,
-        z: o?.z ?? light.z ?? m.tileSize,
-        color: hexToRgb01(light.color),
-        intensity: Math.max(0, light.intensity),
-        type: light.type,
-        angle: o?.angle ?? light.angle,
-        coneAngle: o?.coneAngle ?? light.coneAngle,
-        corners:
-          light.type === "area"
-            ? o?.corners ?? getAreaCorners(light)
-            : undefined,
-        castsShadows: light.castsShadows,
-      });
-    }
-  }
-  return lights;
-}
-
-/** Directional sun/moon term for the engine (undefined = off). */
-function gatherSun(
-  m: MapDocument,
-): { dir: [number, number, number]; color: [number, number, number] } | undefined {
-  const sun = m.lighting?.sun;
-  if (!sun || sun.intensity <= 0) return undefined;
-  const rad = (sun.angle * Math.PI) / 180;
-  const [r, g, b] = hexToRgb01(sun.color);
-  const i = sun.intensity;
-  return { dir: [Math.cos(rad), Math.sin(rad), 0.7], color: [r * i, g * i, b * i] };
 }
 
 export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
@@ -150,20 +91,9 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
   // Run the WebGL pass and repaint the overlay. The engine reuses one canvas, so
   // setState with the same ref won't re-render — force a Konva batchDraw.
   const runEngine = useCallback((m: MapDocument, buffers: LightingBuffers, upload: boolean, override?: LightOverride | null) => {
-    const lighting = m.lighting!;
-    const result = renderLighting({
-      albedo: buffers.albedo,
-      normal: buffers.normal,
-      occluder: buffers.occluder,
-      width: buffers.width,
-      height: buffers.height,
-      scale: BAKE_SCALE,
-      ambientColor: hexToRgb01(lighting.ambientColor),
-      ambientIntensity: Math.max(0, Math.min(1, lighting.ambientIntensity)),
-      lights: gatherEngineLights(m, override),
-      sun: gatherSun(m),
-      uploadBuffers: upload,
-    });
+    const result = renderLighting(
+      buildRenderParams(m, buffers, BAKE_SCALE, { uploadBuffers: upload, override }),
+    );
     if (!result) {
       setLitCanvas(null);
       return;

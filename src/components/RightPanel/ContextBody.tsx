@@ -7,6 +7,7 @@ import { PropsLibrary } from "./PropsLibrary";
 import { LightsLibrary } from "./LightsLibrary";
 import { PropInspector } from "./PropInspector";
 import { LightInspector } from "./LightInspector";
+import { EnvironmentSection } from "./EnvironmentSection";
 
 type LibraryTab = "tiles" | "props" | "lights";
 
@@ -79,6 +80,9 @@ export const ContextBody = () => {
           <LightsLibrary />
         )}
       </div>
+
+      {/* Lighting & atmosphere – map-wide ambient/sun, scoped to the Lights tab */}
+      {libraryTab === "lights" && <EnvironmentSection />}
     </div>
   );
 };

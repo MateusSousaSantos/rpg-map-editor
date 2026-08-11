@@ -274,10 +274,13 @@ export const en = {
 
   export: {
     title: "Export Map",
+    preview: "Preview",
     format: "Format",
     scale: "Scale",
     outputSize: "Output size",
     gridIncluded: "Grid lines will be included",
+    bakeLighting: "Bake lighting",
+    bakeLightingHint: "Apply dynamic lights, shadows & ambient to the image",
     failed: "Export failed",
     exporting: "Exporting…",
     export: "Export",

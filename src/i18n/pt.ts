@@ -273,10 +273,13 @@ export const pt: LocaleDictionary = {
 
   export: {
     title: "Exportar Mapa",
+    preview: "Pré-visualização",
     format: "Formato",
     scale: "Escala",
     outputSize: "Tamanho de saída",
     gridIncluded: "As linhas de grade serão incluídas",
+    bakeLighting: "Aplicar iluminação",
+    bakeLightingHint: "Incorpora luzes dinâmicas, sombras e ambiente à imagem",
     failed: "Falha ao exportar",
     exporting: "Exportando…",
     export: "Exportar",
