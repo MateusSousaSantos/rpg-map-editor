@@ -12,6 +12,7 @@ import { buildLightingBuffers, type LightingBuffers } from "../../utils/lighting
 import { renderLighting } from "../../utils/lighting/engine";
 import { buildRenderParams, type LightOverride } from "../../utils/lighting/scene";
 import { getAreaCorners } from "../../utils/lights";
+import { timeStage } from "../../utils/lighting/devStats";
 
 /**
  * LightLayer — Phase 2 WebGL renderer.
@@ -22,17 +23,43 @@ import { getAreaCorners } from "../../utils/lights";
  * map/texture changes — never per frame. A separate interactive layer of
  * draggable handles lets lights be selected and moved (Phase 1 behaviour, kept).
  *
- * During a prop/handle drag the lit overlay is hidden so the raw map and the
- * moving node are visible; it rebakes on drop.
+ * During a prop/handle drag, or a brush/eraser paint stroke, the lit overlay
+ * is hidden so the raw map (and the moving node, for a drag) stay visible and
+ * update live; it rebakes once the drag/stroke ends. A brush stroke can touch
+ * many cells before mouseup, so without this a full-map rebake would run on
+ * every cell painted — see `isPaintingStroke` below.
  */
 interface LightLayerProps {
   editable?: boolean;
 }
 
-/** Bake at 1 buffer pixel per map pixel; the stage zoom scales the result. */
-const BAKE_SCALE = 1;
+/**
+ * Bake at up to 1 buffer pixel per map pixel — the stage zoom scales the
+ * composited result up or down from there, same as any other Konva image.
+ * Capped by `MAX_BAKE_DIMENSION` (see below) for large maps.
+ */
+const NATIVE_BAKE_SCALE = 1;
+/**
+ * Largest side (in buffer px) the bake is allowed to use, on either axis. A
+ * full-map-resolution bake costs three GPU texture uploads plus a full-map
+ * shader pass (with per-pixel shadow raymarching) on every rebuild, most of
+ * which is typically off-screen — this is the dominant lighting-pipeline
+ * cost on a large map. 2048 keeps a single-viewport-sized map crisp while
+ * capping worst-case buffer size on much larger ones; the `KonvaImage` in the
+ * render below stretches the result back up to full map pixel size, so this
+ * only costs a bit of upscale softness on maps larger than the cap, not
+ * correctness. The PNG/JPEG export path (composeMapCanvas) is untouched — it
+ * bakes once, on demand, at the user's chosen export scale.
+ */
+const MAX_BAKE_DIMENSION = 2048;
 /** Debounce window for rebaking after a change (ms). */
 const BAKE_DEBOUNCE = 80;
+
+/** Bake scale for this map: native (1:1) unless that would exceed the cap. */
+function computeBakeScale(m: MapDocument): number {
+  const longestSide = Math.max(m.width * m.tileSize, m.height * m.tileSize);
+  return Math.min(NATIVE_BAKE_SCALE, MAX_BAKE_DIMENSION / longestSide);
+}
 
 /** Konva `name` on draggable light handles — lets the stage drag handler tell a
  *  light drag (kept live) from a prop/tile drag (overlay hidden). */
@@ -58,6 +85,24 @@ function sameKey(a: unknown[] | null, b: unknown[] | null): boolean {
   return a.every((v, i) => v === b[i]);
 }
 
+/**
+ * Everything that can change what's actually rendered: `contentKey` (buffer
+ * validity) plus the map's ambient lighting config and each layer's lights
+ * array. `map` bumps its reference on *every* store mutation — renaming a
+ * layer, editing the tile palette, adding a prop definition — none of which
+ * affect the lit result. Without this check the effect below would still run
+ * a full-resolution GPU relight pass on every one of those, since it only
+ * ever chose between "relight" and "bake", never "do nothing".
+ */
+function lightingRelevantKey(m: MapDocument, textures: unknown): unknown[] {
+  const key = contentKey(m, textures);
+  key.push(m.lighting?.enabled, m.lighting?.ambientColor, m.lighting?.ambientIntensity, m.lighting?.sun);
+  for (const l of m.layers) {
+    key.push(l.lights);
+  }
+  return key;
+}
+
 export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
   const map = useMapStore((state) => state.map);
   // Subscribing to the textures map means late-loading sprites trigger a rebake.
@@ -69,6 +114,9 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
   // visible for editing. The overlay is non-interactive, so the handles were
   // always clickable — this just makes them visible.
   const editingProp = useUISelectionStore((state) => state.selectionMode === 'props');
+  // True for the whole duration of a brush/eraser drag stroke — see the main
+  // bake-scheduling effect below and useCanvasEvents' handleMouseDown/Up.
+  const isPaintingStroke = useUISelectionStore((state) => state.isPaintingStroke);
   const updateLight = useMapStore((state) => state.updateLight);
   // Drives constant on-screen handle sizing (handles shrink as the map zooms in).
   const zoom = useViewportStore((state) => state.zoom);
@@ -81,7 +129,16 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
   // Cached albedo/normal buffers + the content key that produced them, so a
   // light move can relight without rebuilding them.
   const buffersRef = useRef<LightingBuffers | null>(null);
+  // Scale the currently cached buffers were built at (see computeBakeScale) —
+  // stored alongside them so a cheap relight uses the exact same scale a
+  // fresh bake chose, rather than recomputing it (which would happen to
+  // match today, since it's a pure function of map size, but this keeps the
+  // two paths from being able to drift).
+  const bakeScaleRef = useRef<number>(1);
   const contentKeyRef = useRef<unknown[] | null>(null);
+  // Last key that actually produced a render — lets the main effect skip
+  // entirely when nothing lighting-relevant changed (see lightingRelevantKey).
+  const lastLightingKeyRef = useRef<unknown[] | null>(null);
   // rAF throttle for live relight during a handle drag.
   const rafRef = useRef<number | null>(null);
   const pendingOverrideRef = useRef<LightOverride | null>(null);
@@ -91,8 +148,8 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
   // Run the WebGL pass and repaint the overlay. The engine reuses one canvas, so
   // setState with the same ref won't re-render — force a Konva batchDraw.
   const runEngine = useCallback((m: MapDocument, buffers: LightingBuffers, upload: boolean, override?: LightOverride | null) => {
-    const result = renderLighting(
-      buildRenderParams(m, buffers, BAKE_SCALE, { uploadBuffers: upload, override }),
+    const result = timeStage("relight", () =>
+      renderLighting(buildRenderParams(m, buffers, bakeScaleRef.current, { uploadBuffers: upload, override })),
     );
     if (!result) {
       setLitCanvas(null);
@@ -104,20 +161,24 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
 
   // ── Full bake: rebuild the (expensive) buffers, then relight. ──────────────
   const bake = useCallback(() => {
-    const current = useMapStore.getState().map;
-    if (!current || !current.lighting?.enabled) {
-      setLitCanvas(null);
-      return;
-    }
-    const { getTexture, textures } = useTextureCache.getState();
-    const buffers = buildLightingBuffers(current, BAKE_SCALE, getTexture);
-    if (!buffers) {
-      setLitCanvas(null);
-      return;
-    }
-    buffersRef.current = buffers;
-    contentKeyRef.current = contentKey(current, textures);
-    runEngine(current, buffers, true);
+    timeStage("bake", () => {
+      const current = useMapStore.getState().map;
+      if (!current || !current.lighting?.enabled) {
+        setLitCanvas(null);
+        return;
+      }
+      const { getTexture, textures } = useTextureCache.getState();
+      const scale = computeBakeScale(current);
+      const buffers = timeStage("buildBuffers", () => buildLightingBuffers(current, scale, getTexture));
+      if (!buffers) {
+        setLitCanvas(null);
+        return;
+      }
+      buffersRef.current = buffers;
+      bakeScaleRef.current = scale;
+      contentKeyRef.current = contentKey(current, textures);
+      runEngine(current, buffers, true);
+    });
   }, [runEngine]);
 
   // ── Cheap relight: reuse cached buffers (skip the texture upload). ─────────
@@ -162,8 +223,34 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
       setLitCanvas(null);
       buffersRef.current = null;
       contentKeyRef.current = null;
+      lastLightingKeyRef.current = null;
       return;
     }
+
+    // Skip entirely if nothing that affects the lit result changed — most
+    // store mutations (renaming a layer, editing the tile/prop palette, undo
+    // of an unrelated action, ...) land here and previously still triggered a
+    // full-resolution relight.
+    const fullKey = map ? lightingRelevantKey(map, textures) : null;
+    if (sameKey(fullKey, lastLightingKeyRef.current)) {
+      return;
+    }
+
+    // While a brush/eraser stroke is in progress, don't rebake per cell — a
+    // full-map rebake (buildLightingBuffers' whole-map repaint + the GPU pass)
+    // costs far more than the interval between mousemove events on a real map,
+    // so doing it on every cell painted stalls the entire drag instead of just
+    // relighting it once. Deliberately leave lastLightingKeyRef stale here —
+    // `isPaintingStroke` is a dependency below, so the moment the stroke ends
+    // this same effect reruns, this comparison sees the accumulated change,
+    // and it bakes exactly once for the whole stroke. The overlay itself is
+    // hidden meanwhile (see the `visible` prop below), so the raw, unlit tiles
+    // stay visible and update live during the drag, the same way they did
+    // before the lighting overlay existed.
+    if (isPaintingStroke) return;
+
+    lastLightingKeyRef.current = fullKey;
+
     const key = map ? contentKey(map, textures) : null;
     if (buffersRef.current && sameKey(key, contentKeyRef.current)) {
       relight();
@@ -176,7 +263,7 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
         bakeTimer.current = null;
       }
     };
-  }, [map, textures, lightingOn, scheduleBake, relight]);
+  }, [map, textures, lightingOn, scheduleBake, relight, isPaintingStroke]);
 
   // Cancel any pending rAF on unmount.
   useEffect(() => {
@@ -186,7 +273,8 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
   }, []);
 
   // Hide the lit overlay during a prop/tile drag (its albedo changes and can't
-  // be cheaply relit), then rebake on drop. Light-handle drags are kept live and
+  // be cheaply relit) — the change-detection effect above rebakes on drop,
+  // once the drop commits to the store. Light-handle drags are kept live and
   // relit per-frame by the handles themselves, so they skip this entirely.
   useEffect(() => {
     const stage = overlayLayerRef.current?.getStage();
@@ -199,8 +287,14 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
     };
     const onEnd = (e: Konva.KonvaEventObject<DragEvent>) => {
       if (isLightHandle(e)) return;
+      // No explicit scheduleBake() here: dropping a prop commits its new
+      // position through updateProp, which (via Immer) bumps `layer.props`
+      // and therefore `map`'s reference. The change-detection effect above
+      // already reacts to that — its contentKey compare will see the prop
+      // moved and call scheduleBake() itself. A duplicate call here used to
+      // be harmless (scheduleBake just resets the same debounce timer) but
+      // was dead weight; removed rather than kept as a "just in case".
       setDragging(false);
-      scheduleBake();
     };
     stage.on("dragstart.lighting", onStart);
     stage.on("dragend.lighting", onEnd);
@@ -208,7 +302,7 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
       stage.off("dragstart.lighting");
       stage.off("dragend.lighting");
     };
-  }, [scheduleBake, litCanvas]);
+  }, [litCanvas]);
 
   // Deselect the current light when the user presses down anywhere that isn't a
   // light handle (a light or one of its editing knobs) — light handles cancel
@@ -271,7 +365,7 @@ export const LightLayer = memo(({ editable = true }: LightLayerProps) => {
             width={mapPixelW}
             height={mapPixelH}
             listening={false}
-            visible={!dragging && !(editable && editingProp)}
+            visible={!dragging && !isPaintingStroke && !(editable && editingProp)}
           />
         )}
       </Layer>

@@ -224,11 +224,15 @@ export const pt: LocaleDictionary = {
   objects: {
     title: "Objetos",
     unnamedProp: "Prop sem nome",
+    unnamedLight: "Luz sem nome",
     hide: "Ocultar",
     show: "Mostrar",
     noPropsPlaced: "Nenhum prop colocado ainda",
+    noLightsPlaced: "Nenhuma luz colocada ainda",
     propOne: "prop",
     propMany: "props",
+    lightOne: "luz",
+    lightMany: "luzes",
   },
 
   layers: {

@@ -2,14 +2,25 @@ import { create } from 'zustand';
 
 type SelectionMode = 'tiles' | 'props' | 'lights' | null;
 
+/** Which segment of the right panel's library/hierarchy is active. Shared so the
+ *  top segmented toggle (ContextBody) and the Objects hierarchy panel
+ *  (PropsHierarchyContent) stay in sync instead of each keeping their own tab. */
+export type LibraryTab = 'tiles' | 'props' | 'lights';
+
 interface UISelectionState {
   selectionMode: SelectionMode;
+  libraryTab: LibraryTab;
   selectedTileIds: Set<string>;
   selectedPropIds: Set<string>;
   selectedLightIds: Set<string>;
   selectedLayerId: string | null;
   showGrid: boolean;
   sidebarOpen: boolean;
+  // True for the whole duration of a brush/eraser drag stroke (mousedown to
+  // mouseup), regardless of how many cells it touches. LightLayer reads this
+  // to defer its lighting bake until the stroke ends instead of rebaking the
+  // whole map on every cell painted — see useCanvasEvents' handleMouseDown/Up.
+  isPaintingStroke: boolean;
 
   // Actions
   selectTiles: (tileIds: string[]) => void;
@@ -28,21 +39,25 @@ interface UISelectionState {
   toggleLightSelection: (lightId: string) => void;
 
   selectLayer: (layerId: string | null) => void;
+  setLibraryTab: (tab: LibraryTab) => void;
   clearSelection: () => void;
   toggleGrid: () => void;
   setShowGrid: (show: boolean) => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
+  setPaintingStroke: (active: boolean) => void;
 }
 
 export const useUISelectionStore = create<UISelectionState>((set) => ({
   selectionMode: null,
+  libraryTab: 'tiles',
   selectedTileIds: new Set(),
   selectedPropIds: new Set(),
   selectedLightIds: new Set(),
   selectedLayerId: null,
   showGrid: true,
   sidebarOpen: true,
+  isPaintingStroke: false,
 
   selectTiles: (tileIds) =>
     set(() => ({
@@ -204,6 +219,11 @@ export const useUISelectionStore = create<UISelectionState>((set) => ({
       selectedLayerId: layerId,
     })),
 
+  setLibraryTab: (tab) =>
+    set(() => ({
+      libraryTab: tab,
+    })),
+
   clearSelection: () =>
     set(() => ({
       selectedTileIds: new Set(),
@@ -231,5 +251,10 @@ export const useUISelectionStore = create<UISelectionState>((set) => ({
   setSidebarOpen: (open) =>
     set(() => ({
       sidebarOpen: open,
+    })),
+
+  setPaintingStroke: (active) =>
+    set(() => ({
+      isPaintingStroke: active,
     })),
 }));

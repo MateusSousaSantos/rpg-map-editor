@@ -85,9 +85,29 @@ void main() {
   gl_Position = vec4(aPos, 0.0, 1.0);
 }`;
 
-/** Shadow raymarch: steps toward the light and soft-shadow taps. */
+/**
+ * Shadow raymarch: steps toward the light and soft-shadow taps.
+ *
+ * Step count used to be a flat 48 for every shadow-casting light regardless
+ * of how far it actually reaches — a light barely bigger than a tile was
+ * marched with the same 48 steps as one spanning the whole map, at every
+ * fragment it touches. Now each light gets a step count sized to its own
+ * buffer-space radius (see `computeShadowSteps` / `uLightShadowSteps`),
+ * capped at this constant, which only sets the worst case.
+ */
 const SHADOW_STEPS = 48;
+/** Fewest steps any shadow-casting light gets, so very small lights still
+ *  raymarch enough to catch a wall filling most of their reach. */
+const MIN_SHADOW_STEPS = 12;
+/** Target spacing between raymarch samples, in buffer px. */
+const SHADOW_STEP_PX = 10;
 const SHADOW_TAPS = 4;
+
+/** Per-light raymarch step count, sized to its buffer-space reach. */
+function computeShadowSteps(radiusBufferPx: number): number {
+  const steps = Math.round(radiusBufferPx / SHADOW_STEP_PX);
+  return Math.min(SHADOW_STEPS, Math.max(MIN_SHADOW_STEPS, steps));
+}
 
 const FRAG = `#version 300 es
 precision highp float;
@@ -112,10 +132,14 @@ uniform vec2  uLightConeCos[${MAX_LIGHTS}];// [innerCos, outerCos]
 uniform vec4  uLightQuadA[${MAX_LIGHTS}];  // area corners 0,1 (buffer px): xy=c0, zw=c1
 uniform vec4  uLightQuadB[${MAX_LIGHTS}];  // area corners 2,3 (buffer px): xy=c2, zw=c3
 uniform float uLightShadow[${MAX_LIGHTS}]; // 1 = casts shadows, 0 = not
+// Per-light raymarch step count (see computeShadowSteps on the JS side) — a
+// light's reach determines how many steps its own shadow rays get, instead of
+// every light paying for the same worst-case step count.
+uniform int   uLightShadowSteps[${MAX_LIGHTS}];
 uniform vec3  uSunColor;                 // color * intensity (0 = no sun)
 uniform vec3  uSunDir;                    // direction toward the sun (normalized)
 
-const int SHADOW_STEPS = ${SHADOW_STEPS};
+const int SHADOW_STEPS_MAX = ${SHADOW_STEPS};
 const int SHADOW_TAPS = ${SHADOW_TAPS};
 // Fixed jitter offsets (unit disk) for the soft-shadow penumbra taps.
 const vec2 TAP_OFFSETS[4] = vec2[4](
@@ -125,11 +149,14 @@ const float PENUMBRA = 5.0;   // penumbra radius in buffer px
 
 // One ray from the fragment to the light; returns 1.0 if it reaches the light,
 // 0.0 if a solid occluder blocks it. Starts a few px in to avoid the
-// fragment/wall self-shadowing its own texel.
-float traceRay(vec2 from, vec2 to) {
+// fragment/wall self-shadowing its own texel. 'steps' is this light's own
+// step budget (computeShadowSteps), not always SHADOW_STEPS_MAX — the loop
+// bound is a runtime value, which GLSL ES 3.00 (WebGL2) allows.
+float traceRay(vec2 from, vec2 to, int steps) {
   vec2 delta = to - from;
-  vec2 stepv = delta / float(SHADOW_STEPS);
-  for (int s = 3; s < SHADOW_STEPS; s++) {
+  vec2 stepv = delta / float(steps);
+  for (int s = 3; s < SHADOW_STEPS_MAX; s++) {
+    if (s >= steps) break;
     vec2 p = from + stepv * float(s);
     if (texture(uOccluder, p / uResolution).a > 0.5) return 0.0;
   }
@@ -137,10 +164,10 @@ float traceRay(vec2 from, vec2 to) {
 }
 
 // Fraction of jittered rays that reach the light → soft shadow visibility.
-float visibility(vec2 fragPx, vec2 lightPx) {
+float visibility(vec2 fragPx, vec2 lightPx, int steps) {
   float vis = 0.0;
   for (int t = 0; t < SHADOW_TAPS; t++) {
-    vis += traceRay(fragPx, lightPx + TAP_OFFSETS[t] * PENUMBRA);
+    vis += traceRay(fragPx, lightPx + TAP_OFFSETS[t] * PENUMBRA, steps);
   }
   return vis / float(SHADOW_TAPS);
 }
@@ -222,7 +249,7 @@ void main() {
     float ndl = max(dot(N, L), 0.0);
     if (ndl <= 0.0) continue;
 
-    float vis = uLightShadow[i] > 0.5 ? visibility(fragPx, lpos) : 1.0;
+    float vis = uLightShadow[i] > 0.5 ? visibility(fragPx, lpos, uLightShadowSteps[i]) : 1.0;
 
     lightSum += uLightColor[i] * uLightIntensity[i] * att * ndl * vis;
   }
@@ -350,6 +377,7 @@ function init(): EngineState | null {
     uLightQuadA: u('uLightQuadA'),
     uLightQuadB: u('uLightQuadB'),
     uLightShadow: u('uLightShadow'),
+    uLightShadowSteps: u('uLightShadowSteps'),
     uSunColor: u('uSunColor'),
     uSunDir: u('uSunDir'),
   };
@@ -421,6 +449,7 @@ export function renderLighting(params: RenderLightingParams): HTMLCanvasElement 
   const quadA = new Float32Array(MAX_LIGHTS * 4);
   const quadB = new Float32Array(MAX_LIGHTS * 4);
   const shadow = new Float32Array(MAX_LIGHTS);
+  const shadowSteps = new Int32Array(MAX_LIGHTS);
   for (let i = 0; i < n; i++) {
     const l = lights[i];
     pos[i * 2] = l.x * scale;
@@ -428,10 +457,12 @@ export function renderLighting(params: RenderLightingParams): HTMLCanvasElement 
     col[i * 3] = l.color[0];
     col[i * 3 + 1] = l.color[1];
     col[i * 3 + 2] = l.color[2];
-    rad[i] = l.radius * scale;
+    const radiusBufferPx = l.radius * scale;
+    rad[i] = radiusBufferPx;
     zs[i] = l.z * scale;
     inten[i] = l.intensity;
     shadow[i] = l.castsShadows === false ? 0 : 1;
+    shadowSteps[i] = computeShadowSteps(radiusBufferPx);
 
     if (l.type === 'spot') {
       types[i] = 1;
@@ -472,6 +503,7 @@ export function renderLighting(params: RenderLightingParams): HTMLCanvasElement 
   gl.uniform4fv(uniforms.uLightQuadA, quadA);
   gl.uniform4fv(uniforms.uLightQuadB, quadB);
   gl.uniform1fv(uniforms.uLightShadow, shadow);
+  gl.uniform1iv(uniforms.uLightShadowSteps, shadowSteps);
 
   // Global directional light (sun / moon). Off = black color, so the term
   // contributes nothing. `dir` is normalized here for the shader.

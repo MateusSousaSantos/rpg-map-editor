@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMapStore } from "../../stores/mapStore";
 import { useUISelectionStore } from "../../stores/uiSelectionStore";
 import { useHistoryStore } from "../../stores/historyStore";
@@ -21,6 +21,42 @@ export const LightInspector = () => {
   const { t } = useTranslation();
 
   const [isExpanded, setIsExpanded] = useState(true);
+
+  // rAF-throttled live commit for the Intensity/Radius/Elevation/Flicker
+  // sliders. Each `updateLight` call bumps `map`'s reference, which LightLayer
+  // watches to trigger a full-resolution GPU relight — committing on every
+  // native `input` tick (dozens/sec while dragging) fired that relight
+  // unthrottled, unlike the on-canvas light handles which already coalesce to
+  // one relight per animation frame (LightLayer's scheduleLiveRelight). This
+  // mirrors that pattern: live ticks write through at most once per frame, and
+  // a single UPDATE_LIGHT history entry is recorded on release instead of one
+  // per tick.
+  const sliderDragRef = useRef<{
+    baseline: Partial<LightInstance>;
+    pending: Partial<LightInstance>;
+    raf: number | null;
+  } | null>(null);
+
+  // Flush any in-flight slider drag if the panel unmounts mid-gesture (e.g.
+  // the selection changes) so a live value never gets silently dropped.
+  useEffect(() => {
+    return () => {
+      const d = sliderDragRef.current;
+      if (d && d.raf !== null) {
+        cancelAnimationFrame(d.raf);
+        updateLight(selectedLayerId!, Array.from(selectedLightIds)[0], d.pending);
+        useHistoryStore.getState().addAction({
+          type: "UPDATE_LIGHT",
+          layerId: selectedLayerId!,
+          lightId: Array.from(selectedLightIds)[0],
+          changes: d.pending,
+          previousChanges: d.baseline,
+        });
+        sliderDragRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLayerId, selectedLightIds]);
 
   if (!map) return null;
 
@@ -62,6 +98,45 @@ export const LightInspector = () => {
       changes,
       previousChanges,
     });
+  };
+
+  /** Live slider tick: coalesces the store write to once per animation frame. */
+  const liveSliderChange = (key: keyof LightInstance, value: number) => {
+    let d = sliderDragRef.current;
+    if (!d) {
+      d = { baseline: {}, pending: {}, raf: null };
+      sliderDragRef.current = d;
+    }
+    if (!(key in d.baseline)) {
+      (d.baseline as Record<string, unknown>)[key] = light[key];
+    }
+    (d.pending as Record<string, unknown>)[key] = value;
+    if (d.raf === null) {
+      d.raf = requestAnimationFrame(() => {
+        const cur = sliderDragRef.current;
+        if (!cur) return;
+        cur.raf = null;
+        updateLight(layerId, light.id, cur.pending);
+      });
+    }
+  };
+
+  /** Drag/keyboard gesture end: flush the final value and record one undo entry. */
+  const finishSliderChange = () => {
+    const d = sliderDragRef.current;
+    if (!d) return;
+    if (d.raf !== null) {
+      cancelAnimationFrame(d.raf);
+      updateLight(layerId, light.id, d.pending);
+    }
+    useHistoryStore.getState().addAction({
+      type: "UPDATE_LIGHT",
+      layerId,
+      lightId: light.id,
+      changes: d.pending,
+      previousChanges: d.baseline,
+    });
+    sliderDragRef.current = null;
   };
 
   const handleDelete = () => {
@@ -177,7 +252,8 @@ export const LightInspector = () => {
                 max={4}
                 step={0.1}
                 value={light.intensity}
-                onChange={(v) => commit({ intensity: v })}
+                onChange={(v) => liveSliderChange("intensity", v)}
+                onCommit={finishSliderChange}
               />
             </div>
 
@@ -191,7 +267,8 @@ export const LightInspector = () => {
                 max={Math.max(512, Math.round(light.radius))}
                 step={1}
                 value={light.radius}
-                onChange={(v) => commit({ radius: v })}
+                onChange={(v) => liveSliderChange("radius", v)}
+                onCommit={finishSliderChange}
               />
             </div>
 
@@ -205,7 +282,8 @@ export const LightInspector = () => {
                 max={256}
                 step={1}
                 value={light.z ?? 0}
-                onChange={(v) => commit({ z: v })}
+                onChange={(v) => liveSliderChange("z", v)}
+                onCommit={finishSliderChange}
               />
             </div>
 
@@ -290,7 +368,8 @@ export const LightInspector = () => {
                 max={1}
                 step={0.05}
                 value={light.flicker ?? 0}
-                onChange={(v) => commit({ flicker: v })}
+                onChange={(v) => liveSliderChange("flicker", v)}
+                onCommit={finishSliderChange}
               />
             </div>
 

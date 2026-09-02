@@ -6,7 +6,7 @@ import { ExportModal } from "../components/ExportModal/ExportModal";
 import { Navbar } from "../components/Layout/Navbar";
 import { MapNameEditor } from "../components/MapNameEditor";
 import { LoadingOverlay } from "../components/LoadingOverlay";
-import { useMapStore } from "../stores/mapStore";
+import { useMapStore, flushMapPersistence } from "../stores/mapStore";
 import { useUISelectionStore } from "../stores/uiSelectionStore";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -18,6 +18,33 @@ function App() {
 
   // Enable keyboard shortcuts
   useKeyboardShortcuts();
+
+  // Map edits persist to localStorage on a trailing debounce (see mapStore) so
+  // a `beforeunload` write covers a real tab close, but a client-side route
+  // change (e.g. back to the Vault) doesn't fire that event — flush explicitly
+  // on unmount so nothing from the last debounce window is lost.
+  useEffect(() => {
+    return () => {
+      flushMapPersistence();
+    };
+  }, []);
+
+  // Dev-only: expose the lighting perf stress-test generator on `window` so it
+  // can be run from the browser console (`__stressLighting()`) without any
+  // shipped UI. See utils/lightingStressTest.ts.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    let cancelled = false;
+    import("../utils/lightingStressTest").then(({ generateLightingStressMap }) => {
+      if (cancelled) return;
+      (window as unknown as { __stressLighting: typeof generateLightingStressMap }).__stressLighting =
+        generateLightingStressMap;
+      console.log("[dev] __stressLighting(options?) is available on window — see utils/lightingStressTest.ts");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (map && map.layers.length > 0) {

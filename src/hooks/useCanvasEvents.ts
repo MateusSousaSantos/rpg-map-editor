@@ -62,7 +62,7 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
   const { activeTool, boxMode, selectedTileDefinitionId, selectedTileGridType, selectedPropDefinitionId, selectedLightType } = useToolStore();
   const { addTile, removeTile, getTileAt, map, addProp, addLight } = useMapStore();
   const { zoom, panX, panY } = useViewportStore();
-  const { selectTiles, toggleTileSelection, clearSelection, selectedLayerId, selectProps, togglePropSelection, selectLights, selectLayer } = useUISelectionStore();
+  const { selectTiles, toggleTileSelection, clearSelection, selectedLayerId, selectProps, togglePropSelection, selectLights, selectLayer, setPaintingStroke } = useUISelectionStore();
 
   // Track if we're currently drawing (for drag operations)
   const isDrawingRef = useRef(false);
@@ -650,6 +650,13 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     isDrawingRef.current = true;
     lastDrawnTileRef.current = { x: gridX, y: gridY };
 
+    // Brush/eraser strokes can touch many cells before mouseup — flag the
+    // whole stroke so LightLayer defers its (expensive, full-map) lighting
+    // bake until the stroke ends instead of rebaking after every cell.
+    if (activeTool === 'brush' || activeTool === 'eraser') {
+      setPaintingStroke(true);
+    }
+
     // Handle tool action
     switch (activeTool) {
       case 'brush':
@@ -756,7 +763,8 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     lastDrawnTileRef.current = null;
     boxStartRef.current = null;
     setBoxPreview(null);
-  }, [activeTool, boxMode, screenToGrid, handleBoxPaintTool, handleBoxEraseTool]);
+    setPaintingStroke(false);
+  }, [activeTool, boxMode, screenToGrid, handleBoxPaintTool, handleBoxEraseTool, setPaintingStroke]);
 
   /**
    * Handle touch start — single finger only; mirrors handleMouseDown
@@ -778,6 +786,10 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
 
     isDrawingRef.current = true;
     lastDrawnTileRef.current = { x: gridX, y: gridY };
+
+    if (activeTool === 'brush' || activeTool === 'eraser') {
+      setPaintingStroke(true);
+    }
 
     switch (activeTool) {
       case 'brush':
@@ -880,7 +892,8 @@ export const useCanvasEvents = ({ tileSize, editable }: CanvasEventsParams) => {
     lastDrawnTileRef.current = null;
     boxStartRef.current = null;
     setBoxPreview(null);
-  }, [activeTool, boxMode, screenToGrid, handleBoxPaintTool, handleBoxEraseTool]);
+    setPaintingStroke(false);
+  }, [activeTool, boxMode, screenToGrid, handleBoxPaintTool, handleBoxEraseTool, setPaintingStroke]);
 
   return {
     handleMouseDown,

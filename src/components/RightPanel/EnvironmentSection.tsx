@@ -66,7 +66,7 @@ export const EnvironmentSection = () => {
   return (
     <CollapsibleSection
       title={t("light.environment")}
-      defaultOpen={false}
+      defaultOpen={true}
       headerRight={enabledToggle}
       bodyClassName="px-2.5 pb-3 space-y-3"
     >

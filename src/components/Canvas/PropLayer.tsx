@@ -9,7 +9,7 @@
  */
 
 import { Group, Image, Transformer } from 'react-konva';
-import { useEffect, useState, useRef, memo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback, memo } from 'react';
 import { useUISelectionStore } from '../../stores/uiSelectionStore';
 import { useToolStore } from '../../stores/toolStore';
 import { useTextureCache } from '../../stores/textureCache';
@@ -25,16 +25,34 @@ interface PropLayerProps {
 
 export const PropLayer = memo(({ layer }: PropLayerProps) => {
   // Sort props by global depth: (layer.depthIndex * 10000) + prop.zIndex
-  // This ensures props in lower layers always appear beneath props in higher layers
-  const sortedProps = [...layer.props].sort((a, b) => {
-    const globalDepthA = layer.depthIndex * 10000 + a.zIndex;
-    const globalDepthB = layer.depthIndex * 10000 + b.zIndex;
-    return globalDepthA - globalDepthB;
-  });
+  // This ensures props in lower layers always appear beneath props in higher layers.
+  // Memoized on the props array/depthIndex specifically (not the whole `layer`
+  // object) so painting a tile on this same layer — which changes `layer`'s
+  // reference but not `layer.props` — doesn't produce a new array here and
+  // cascade into the selection-transformer effect below.
+  const sortedProps = useMemo(() => {
+    return [...layer.props].sort((a, b) => {
+      const globalDepthA = layer.depthIndex * 10000 + a.zIndex;
+      const globalDepthB = layer.depthIndex * 10000 + b.zIndex;
+      return globalDepthA - globalDepthB;
+    });
+  }, [layer.props, layer.depthIndex]);
   const selectedPropIds = useUISelectionStore((state) => state.selectedPropIds);
   const activeTool = useToolStore((state) => state.activeTool);
   const transformerRef = useRef<Konva.Transformer>(null);
   const groupRefs = useRef<Map<string, Konva.Group>>(new Map());
+
+  // Stable across renders (empty deps) so it doesn't defeat PropGroup's memo —
+  // previously this was two inline closures recreated every PropLayer render,
+  // which meant every prop fully re-rendered whenever this layer's tiles (or
+  // anything else on it) changed, not just when that prop itself changed.
+  const registerPropGroupRef = useCallback((propId: string, node: Konva.Group | null) => {
+    if (node) {
+      groupRefs.current.set(propId, node);
+    } else {
+      groupRefs.current.delete(propId);
+    }
+  }, []);
 
   // Update transformer when selection changes. The Transformer must live in the
   // same Konva layer as the nodes it manipulates (Konva doesn't track nodes
@@ -68,8 +86,7 @@ export const PropLayer = memo(({ layer }: PropLayerProps) => {
           prop={prop}
           layerId={layer.id}
           layerOpacity={layer.opacity}
-          onMount={(node) => groupRefs.current.set(prop.id, node)}
-          onUnmount={() => groupRefs.current.delete(prop.id)}
+          onRefChange={registerPropGroupRef}
         />
       ))}
 
@@ -99,11 +116,10 @@ interface PropGroupProps {
   prop: PropInstance;
   layerId: string;
   layerOpacity: number;
-  onMount: (node: Konva.Group) => void;
-  onUnmount: () => void;
+  onRefChange: (propId: string, node: Konva.Group | null) => void;
 }
 
-const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: PropGroupProps) => {
+const PropGroup = memo(({ prop, layerId, layerOpacity, onRefChange }: PropGroupProps) => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const { selectLayer, selectProps } = useUISelectionStore();
   const activeTool = useToolStore((state) => state.activeTool);
@@ -114,18 +130,21 @@ const PropGroup = memo(({ prop, layerId, layerOpacity, onMount, onUnmount }: Pro
   const { getTexture, loadTexture } = useTextureCache();
   const groupRef = useRef<Konva.Group>(null);
 
-  // Get prop definition
-  const definition = propDefinitions.find(def => def.id === prop.definitionId);
+  // Get prop definition. Memoized on the definitions array/id — Immer keeps
+  // `propDefinitions` referentially stable across edits that don't touch it
+  // (e.g. painting tiles), so this only actually re-runs when it needs to.
+  const definition = useMemo(
+    () => propDefinitions.find(def => def.id === prop.definitionId),
+    [propDefinitions, prop.definitionId]
+  );
 
   // Register/unregister group ref so the layer's Transformer can attach to it.
   useEffect(() => {
-    if (groupRef.current) {
-      onMount(groupRef.current);
-    }
+    onRefChange(prop.id, groupRef.current);
     return () => {
-      onUnmount();
+      onRefChange(prop.id, null);
     };
-  }, [onMount, onUnmount]);
+  }, [onRefChange, prop.id]);
 
   // Load image via shared texture cache (deduplicates loads across props)
   useEffect(() => {

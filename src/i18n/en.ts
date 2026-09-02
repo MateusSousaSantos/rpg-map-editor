@@ -225,11 +225,15 @@ export const en = {
   objects: {
     title: "Objects",
     unnamedProp: "Unnamed Prop",
+    unnamedLight: "Unnamed Light",
     hide: "Hide",
     show: "Show",
     noPropsPlaced: "No props placed yet",
+    noLightsPlaced: "No lights placed yet",
     propOne: "prop",
     propMany: "props",
+    lightOne: "light",
+    lightMany: "lights",
   },
 
   layers: {

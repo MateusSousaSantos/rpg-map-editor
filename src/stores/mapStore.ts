@@ -5,8 +5,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 
-import { persist, createJSONStorage } from 'zustand/middleware'
-
 import type {
   MapDocument,
   MapLayer,
@@ -182,12 +180,118 @@ interface MapState {
   updatePropDefinition: (definitionId: string, changes: Partial<PropDefinition>) => void;
 }
 
+// ============================================================================
+// PERSISTENCE — manual, debounced
+// ============================================================================
+//
+// This store used to be wrapped in Zustand's `persist` middleware, which
+// re-serializes the ENTIRE document (every tile of every saved map) and
+// synchronously writes it to localStorage after every single `set()` call.
+// Since `addTile`/`removeTile` fire once per grid cell during a brush/eraser
+// drag, that meant a full JSON.stringify + localStorage.setItem of the whole
+// app's data on every pixel the brush touched — the single biggest source of
+// input lag while painting. We hydrate once on startup and persist on a
+// trailing debounce instead, flushing immediately on tab close/navigation so
+// nothing is lost.
+
+const MAP_STORAGE_KEY = 'rpg-map-storage';
+const MAP_PERSIST_DEBOUNCE_MS = 500;
+
+type PersistedLayer = Omit<MapLayer, 'tiles' | 'tilesById'> & {
+  tiles: [string, TileInstance][];
+  tilesById: [string, TileInstance][];
+};
+type PersistedMapDocument = Omit<MapDocument, 'layers'> & { layers: PersistedLayer[] };
+
+const serializeMapDocument = (map: MapDocument): PersistedMapDocument => ({
+  ...map,
+  layers: map.layers.map((layer) => ({
+    ...layer,
+    tiles: Array.from(layer.tiles.entries()),
+    tilesById: Array.from(layer.tilesById.entries()),
+  })),
+});
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const reviveMapDocument = (raw: any): MapDocument => ({
+  ...raw,
+  createdAt: new Date(raw.createdAt),
+  lastModified: new Date(raw.lastModified),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  layers: (raw.layers ?? []).map((layer: any) => ({
+    ...layer,
+    tiles: new Map(layer.tiles || []),
+    tilesById: new Map(layer.tilesById || []),
+    lights: layer.lights || [],
+  })),
+});
+
+interface PersistedMapState {
+  map: MapDocument | null;
+  savedMaps: Map<string, MapDocument>;
+  currentMapId: string | null;
+}
+
+const loadPersistedMapState = (): PersistedMapState => {
+  const empty: PersistedMapState = { map: null, savedMaps: new Map(), currentMapId: null };
+  try {
+    const raw = localStorage.getItem(MAP_STORAGE_KEY);
+    if (!raw) return empty;
+    const parsed = JSON.parse(raw);
+    const persisted = parsed?.state;
+    if (!persisted) return empty;
+
+    const map = persisted.map ? reviveMapDocument(persisted.map) : null;
+    const savedMaps = new Map<string, MapDocument>(
+      Array.isArray(persisted.savedMaps)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? persisted.savedMaps.map(([id, m]: [string, any]) => [id, reviveMapDocument(m)])
+        : []
+    );
+    return { map, savedMaps, currentMapId: persisted.currentMapId ?? null };
+  } catch (err) {
+    console.error('Failed to load persisted map state:', err);
+    return empty;
+  }
+};
+
+let mapPersistTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Synchronously serialize the current store state and write it to localStorage. */
+const flushMapPersistence = () => {
+  if (mapPersistTimer) {
+    clearTimeout(mapPersistTimer);
+    mapPersistTimer = null;
+  }
+  const state = useMapStore.getState();
+  try {
+    const payload = {
+      state: {
+        map: state.map ? serializeMapDocument(state.map) : null,
+        savedMaps: Array.from(state.savedMaps.entries()).map(([id, m]) => [id, serializeMapDocument(m)]),
+        currentMapId: state.currentMapId,
+      },
+      version: 0,
+    };
+    localStorage.setItem(MAP_STORAGE_KEY, JSON.stringify(payload));
+  } catch (err) {
+    console.error('Failed to persist map state:', err);
+  }
+};
+
+/** Trailing-debounce a write; rapid edits (e.g. a brush stroke) coalesce into one. */
+const scheduleMapPersistence = () => {
+  if (mapPersistTimer) clearTimeout(mapPersistTimer);
+  mapPersistTimer = setTimeout(flushMapPersistence, MAP_PERSIST_DEBOUNCE_MS);
+};
+
 export const useMapStore = create<MapState>()(
-  persist(
-    immer((set, get) => ({
-      map: null,
-      savedMaps: new Map(),
-      currentMapId: null,
+  immer((set, get) => {
+    const persisted = loadPersistedMapState();
+    return {
+      map: persisted.map,
+      savedMaps: persisted.savedMaps,
+      currentMapId: persisted.currentMapId,
 
       createMap: (name, width, height, tileSize) =>
         set((state) => {
@@ -254,6 +358,13 @@ export const useMapStore = create<MapState>()(
 
     loadMapById: (mapId) =>
       set((state) => {
+        // addTile/removeTile no longer eagerly sync into savedMaps (see the
+        // persistence note above) — catch the outgoing map up before we
+        // abandon `state.map` for it, so its edits aren't lost if it's
+        // reopened later.
+        if (state.map && state.currentMapId && state.currentMapId !== mapId) {
+          state.savedMaps.set(state.currentMapId, state.map);
+        }
         const mapToLoad = state.savedMaps.get(mapId);
         if (mapToLoad) {
           state.map = {
@@ -285,7 +396,16 @@ export const useMapStore = create<MapState>()(
 
     getAllMaps: () => {
       const state = get();
-      return Array.from(state.savedMaps.values());
+      const maps = Array.from(state.savedMaps.values());
+      // The currently open map may be ahead of its savedMaps entry (see the
+      // persistence note above) — substitute the live copy so callers like
+      // the Vault listing never show stale data for it.
+      if (state.map && state.currentMapId) {
+        const currentMapId = state.currentMapId;
+        const liveMap = state.map;
+        return maps.map((m) => (m.id === currentMapId ? liveMap : m));
+      }
+      return maps;
     },
 
     setMapThumbnail: (mapId, dataUrl) =>
@@ -402,11 +522,11 @@ export const useMapStore = create<MapState>()(
               }
             }
 
+            // `state.map` is the live source of truth for the currently open
+            // map; savedMaps/localStorage are kept in sync by the debounced
+            // persistence flush (see above) rather than on every tile — that's
+            // what keeps brush drag strokes cheap.
             state.map.lastModified = new Date();
-            // Sync to savedMaps
-            if (state.currentMapId) {
-              state.savedMaps.set(state.currentMapId, state.map);
-            }
           }
         }
       }),
@@ -430,11 +550,9 @@ export const useMapStore = create<MapState>()(
                   layer.tilesById.delete(candidate.id);
                 }
               }
+              // See addTile above — savedMaps/localStorage sync is deferred to
+              // the debounced persistence flush, not done per tile removed.
               state.map.lastModified = new Date();
-              // Sync to savedMaps
-              if (state.currentMapId) {
-                state.savedMaps.set(state.currentMapId, state.map);
-              }
             }
           }
         }
@@ -803,73 +921,25 @@ export const useMapStore = create<MapState>()(
           }
         }
       }),
-    })),
-    {
-      name: 'rpg-map-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        map: state.map ? {
-          ...state.map,
-          layers: state.map.layers.map(layer => ({
-            ...layer,
-            tiles: Array.from(layer.tiles.entries()),
-            tilesById: Array.from(layer.tilesById.entries()),
-          })),
-        } : null,
-        savedMaps: Array.from(state.savedMaps.entries()).map(([id, map]) => [
-          id,
-          {
-            ...map,
-            layers: map.layers.map(layer => ({
-              ...layer,
-              tiles: Array.from(layer.tiles.entries()),
-              tilesById: Array.from(layer.tilesById.entries()),
-            })),
-          }
-        ]),
-        currentMapId: state.currentMapId,
-      }),
-      onRehydrateStorage: () => (state) => {
-        if (state?.map) {
-          // Restore Date objects
-          if (state.map.createdAt) {
-            state.map.createdAt = new Date(state.map.createdAt);
-          }
-          if (state.map.lastModified) {
-            state.map.lastModified = new Date(state.map.lastModified);
-          }
-          // Restore Maps from arrays
-          if (state.map.layers) {
-            state.map.layers = state.map.layers.map((layer: any) => ({
-              ...layer,
-              tiles: new Map(layer.tiles || []),
-              tilesById: new Map(layer.tilesById || []),
-              lights: layer.lights || [],
-            }));
-          }
-        }
-
-        // Restore savedMaps
-        if (state?.savedMaps && Array.isArray(state.savedMaps)) {
-          const mapsArray = state.savedMaps as any[];
-          state.savedMaps = new Map(
-            mapsArray.map(([id, map]: any) => [
-              id,
-              {
-                ...map,
-                createdAt: new Date(map.createdAt),
-                lastModified: new Date(map.lastModified),
-                layers: map.layers.map((layer: any) => ({
-                  ...layer,
-                  tiles: new Map(layer.tiles || []),
-                  tilesById: new Map(layer.tilesById || []),
-                  lights: layer.lights || [],
-                })),
-              }
-            ])
-          );
-        }
-      },
-    }
-  )
+    };
+  })
 );
+
+// Persist on a trailing debounce whenever the document, saved-maps collection,
+// or current-map pointer actually changes reference (i.e. something mutated).
+useMapStore.subscribe((state, prevState) => {
+  if (
+    state.map !== prevState.map ||
+    state.savedMaps !== prevState.savedMaps ||
+    state.currentMapId !== prevState.currentMapId
+  ) {
+    scheduleMapPersistence();
+  }
+});
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', flushMapPersistence);
+  window.addEventListener('pagehide', flushMapPersistence);
+}
+
+export { flushMapPersistence };
